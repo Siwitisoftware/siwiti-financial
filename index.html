@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>MFUMO WA FEDHA - FINANCIAL MANAGEMENT SYSTEM</title>
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#2c3e50">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Mfumo wa Fedha">
   <!-- Notiflix -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notiflix@3.2.6/dist/notiflix-3.2.6.min.css">
   <script src="https://cdn.jsdelivr.net/npm/notiflix@3.2.6/dist/notiflix-aio-3.2.6.min.js"></script>
@@ -817,6 +825,70 @@ tr:hover {
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 12px;
+}
+
+/* ============ PWA install button/banner ============ */
+.install-app-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 3000;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: var(--secondary);
+  color: white;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 30px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(52, 152, 219, 0.4);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.install-app-btn:hover {
+  background: var(--primary);
+  transform: translateY(-2px);
+}
+
+.install-app-btn.show {
+  display: inline-flex;
+}
+
+.ios-install-banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3000;
+  display: none;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  border: 1px solid #eef2f6;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  font-size: 13px;
+  color: #444;
+}
+
+.ios-install-banner.show {
+  display: flex;
+}
+
+.ios-install-banner i.fa-share-square {
+  color: var(--secondary);
+  font-size: 18px;
+}
+
+.ios-install-banner .ios-close {
+  margin-left: auto;
+  cursor: pointer;
+  color: var(--gray);
+  font-size: 16px;
 }
 
 /* Account Cards */
@@ -10106,8 +10178,127 @@ function deleteTransactionsInBatches(password, totalTransactions) {
         container.style.borderRadius = '0';
       }
     });
-    
+
+    // ============ PWA: Install App ============
+    let deferredInstallPrompt = null;
+
+    function isRunningStandalone() {
+      return window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
+    }
+
+    // Chrome/Edge/Android: fires when the app is installable
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const btn = document.getElementById('installAppBtn');
+      if (btn && !isRunningStandalone()) btn.classList.add('show');
+    });
+
+    function installApp() {
+      const btn = document.getElementById('installAppBtn');
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      deferredInstallPrompt.userChoice.finally(function() {
+        deferredInstallPrompt = null;
+        if (btn) btn.classList.remove('show');
+      });
+    }
+
+    // App was installed (any browser that supports the event)
+    window.addEventListener('appinstalled', function() {
+      const btn = document.getElementById('installAppBtn');
+      if (btn) btn.classList.remove('show');
+      if (typeof Notiflix !== 'undefined') {
+        Notiflix.Notify.success('Umefanikiwa kusakinisha App!');
+      }
+    });
+
+    // iOS Safari has no beforeinstallprompt event; show manual instructions instead
+    function isIos() {
+      return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      if (isIos() && !isRunningStandalone() && !localStorage.getItem('iosInstallBannerDismissed')) {
+        const banner = document.getElementById('iosInstallBanner');
+        if (banner) banner.classList.add('show');
+      }
+    });
+
+    function dismissIosInstallBanner() {
+      const banner = document.getElementById('iosInstallBanner');
+      if (banner) banner.classList.remove('show');
+      try { localStorage.setItem('iosInstallBannerDismissed', '1'); } catch (e) {}
+    }
+
+    // Register the service worker (enables offline app loading + install prompt)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(function(registration) {
+            // Angalia kama kuna toleo jipya la service worker mara moja
+            registration.update().catch(function() {});
+
+            // Kama tayari kuna toleo jipya linalosubiri (waiting), likamilishe mara moja
+            if (registration.waiting) {
+              notifyAppUpdated();
+            }
+
+            // Fuatilia toleo jipya linapopatikana
+            registration.addEventListener('updatefound', function() {
+              const newWorker = registration.installing;
+              if (!newWorker) return;
+              newWorker.addEventListener('statechange', function() {
+                if (newWorker.state === 'activated') {
+                  notifyAppUpdated();
+                }
+              });
+            });
+          })
+          .catch(function(err) {
+            console.error('Service worker registration failed:', err);
+          });
+
+        // Ujumbe kutoka kwa service worker unaposema toleo jipya limewekwa
+        navigator.serviceWorker.addEventListener('message', function(event) {
+          if (event.data && event.data.type === 'SW_UPDATED') {
+            notifyAppUpdated();
+          }
+        });
+      });
+    }
+
+    // Mwambie mtumiaji kuwa toleo jipya la App liko tayari na ampe nafasi ya kupakua upya
+    let appUpdateNotified = false;
+    function notifyAppUpdated() {
+      if (appUpdateNotified) return;
+      appUpdateNotified = true;
+
+      if (typeof Notiflix !== 'undefined' && Notiflix.Report) {
+        Notiflix.Report.info(
+          'Toleo Jipya Limepatikana',
+          'Mfumo umeboreshwa. Bofya "Pakua Upya" ili kuona mabadiliko mapya.',
+          'Pakua Upya',
+          function() { window.location.reload(); }
+        );
+      } else {
+        window.location.reload();
+      }
+    }
     
   </script>
+
+  <!-- PWA Install UI -->
+  <button type="button" class="install-app-btn" id="installAppBtn" onclick="installApp()">
+    <i class="fas fa-download"></i> Sakinisha App
+  </button>
+
+  <div class="ios-install-banner" id="iosInstallBanner">
+    <i class="fas fa-share-square"></i>
+    <span>Kusakinisha app: bonyeza <strong>Share</strong> kisha chagua <strong>"Add to Home Screen"</strong>.</span>
+    <i class="fas fa-times ios-close" onclick="dismissIosInstallBanner()"></i>
+  </div>
+
 </body>
 </html>
