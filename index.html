@@ -2820,7 +2820,7 @@ tr:hover {
 
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxcnAyqYgeV0zzEm7nkSSH7WKYftw_PlrsDBMFylrdhNlC99ZAK40aHA9pBhzNd0uTU/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxznaQRk1nfVCfKNRMJpoDxwVMd8R2aa_UP3ilSXz7ekTZ1zV-VNm7b398_pJYxMr8t/exec";
     let currentDbId = null;
     let currentOrganization = '';
     let currentUserEmail = '';
@@ -6408,7 +6408,7 @@ function showQuickNotification(message, type = 'success') {
         reportBtn.innerHTML = originalText;
         
         if (data.status === 'success') {
-          forceDownloadPDF(data.downloadUrl, data.fileName);
+          forceDownloadPDF(data.pdfBase64, data.fileName, data.mimeType, data.downloadUrl);
           
           // Silent success notification
           showQuickNotification('Ripoti imetengenezwa kikamilifu');
@@ -6466,7 +6466,7 @@ function generateTypeReport() {
         typeReportBtn.innerHTML = originalText;
         
         if (data.status === 'success') {
-          forceDownloadPDF(data.downloadUrl, data.fileName);
+          forceDownloadPDF(data.pdfBase64, data.fileName, data.mimeType, data.downloadUrl);
           showQuickNotification(`Ripoti ya ${reportTypeName} imetengenezwa`);
         } else {
           showQuickNotification(data.message, 'error');
@@ -6483,13 +6483,128 @@ function generateTypeReport() {
   );
 }
     
-    function forceDownloadPDF(downloadUrl, fileName) {
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    // ============ PDF Download: two separate, non-overlapping paths ============
+    //
+    // 1) Android WebView apps (AppCreator24 na wenzake): hutumia URL halisi ya https://
+    //    kuelekea faili la Google Drive (linaloweza kufikiwa na "Anyone with the link").
+    //    Hii ni MUHIMU kwa sababu Android DownloadManager (inayotumiwa na WebView hizi
+    //    kushughulikia downloads) HAIWEZI kabisa kusoma blob:/data: URIs — inahitaji
+    //    http(s) link halisi.
+    //
+    // 2) Website ya kawaida (Chrome/Firefox/Safari/Edge n.k, desktop au simu): hutumia
+    //    blob: kutoka kwenye PDF base64 iliyotumwa na server — hii inapakua faili moja
+    //    kwa moja bila kugusa Google Drive kabisa.
+
+    // Utambuzi wa Android WebView app (kama AppCreator24) - unaziacha nje browsers halisi
+    // (Chrome, Firefox, Samsung Internet, Edge, Opera, UC Browser n.k) hata kwenye Android.
+    // Utambuzi wa uhakika: alama dhahiri (?platform=app) tunayoiweka wenyewe kwenye URL
+    // ya Website inayowekwa kwenye mipangilio ya AppCreator24 (Website URL / App URL).
+    // Hii ndiyo njia pekee ya UHAKIKA 100% - kwa sababu WebView apps nyingi (AppCreator24
+    // ikiwemo) huacha User-Agent ikifanana kabisa na Chrome ya kawaida ya Android kwa
+    // makusudi (ili tovuti zisizizuie), hivyo kutambua kwa UA pekee si salama.
+    //
+    // JINSI YA KUWEKA: Kwenye AppCreator24, nenda kwenye mipangilio ya "Website URL" /
+    // "App URL" na uongeze ?platform=app mwishoni, mfano:
+    //   https://jina-la-tovuti-yako.netlify.app/?platform=app
+    // Baada ya kuweka hivyo na kujenga upya (rebuild) App, download itafanya kazi kwa uhakika.
+    function isLikelyWebViewApp() {
+      // 1) Alama dhahiri kutoka kwenye URL - ndiyo chanzo kikuu cha uamuzi
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('platform') === 'app') {
+          try { localStorage.setItem('isAppCreatorApp', '1'); } catch (e) {}
+          return true;
+        }
+        // Ruhusu pia kuondoa alama hiyo kwa makusudi (mfano wakati wa kupima kwenye website)
+        if (params.get('platform') === 'web') {
+          try { localStorage.removeItem('isAppCreatorApp'); } catch (e) {}
+          return false;
+        }
+      } catch (e) {}
+
+      // 2) Kumbukumbu ya awali - endapo query param ilipotea kwenye urejeshaji fulani
+      //    ndani ya App (mfano baada ya kufungua na kufunga App)
+      try {
+        if (localStorage.getItem('isAppCreatorApp') === '1') return true;
+      } catch (e) {}
+
+      // 3) Akiba ya mwisho: ishara dhaifu za User-Agent (si za uhakika kamili, lakini
+      //    zinasaidia kama query param haikuwekwa kabisa)
+      const ua = navigator.userAgent || '';
+      if (!/Android/i.test(ua)) return false;
+
+      if (/Firefox|FxiOS|OPR\/|Opera|EdgA\/|SamsungBrowser|UCBrowser|MiuiBrowser|HeyTap|VivoBrowser|CriOS/i.test(ua)) {
+        return false;
+      }
+      if (/;\s*wv\)/i.test(ua)) return true;
+      if (!/Safari/i.test(ua)) return true;
+
+      return false;
+    }
+
+    // Njia ya 1: URL halisi ya Drive - kwa Android WebView apps (AppCreator24 n.k)
+    function downloadViaDirectUrl(downloadUrl, fileName) {
+      if (!downloadUrl) {
+        showQuickNotification('Imeshindwa kupakua ripoti', 'error');
+        return;
+      }
+      try {
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = fileName || '';
+        link.target = '_blank';
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (e) {
+        console.error('PDF download error (direct URL):', e);
+        window.location.href = downloadUrl;
+      }
+    }
+
+    // Njia ya 2: blob - kwa website ya kawaida (haigusi Google Drive kabisa)
+    function downloadViaBlob(pdfBase64, fileName, mimeType, fallbackDriveUrl) {
+      if (!pdfBase64) {
+        // Ikiwa kwa sababu yoyote base64 haipo, tumia URL ya Drive kama njia ya mwisho
+        if (fallbackDriveUrl) downloadViaDirectUrl(fallbackDriveUrl, fileName);
+        return;
+      }
+      try {
+        const byteCharacters = atob(pdfBase64);
+        const byteArray = new Uint8Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteArray[i] = byteCharacters.charCodeAt(i);
+        }
+
+        const blob = new Blob([byteArray], { type: mimeType || 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 10000);
+      } catch (e) {
+        console.error('PDF download error (blob):', e);
+        if (fallbackDriveUrl) {
+          downloadViaDirectUrl(fallbackDriveUrl, fileName);
+        } else {
+          showQuickNotification('Imeshindwa kupakua ripoti', 'error');
+        }
+      }
+    }
+
+    // Kiungo kikuu: kinachagua njia sahihi kulingana na mazingira, bila kuingiliana
+    function forceDownloadPDF(pdfBase64, fileName, mimeType, downloadUrl) {
+      if (isLikelyWebViewApp()) {
+        downloadViaDirectUrl(downloadUrl, fileName);
+      } else {
+        downloadViaBlob(pdfBase64, fileName, mimeType, downloadUrl);
+      }
     }
     
    // Save minimum amount silently without showing loading
