@@ -258,6 +258,20 @@ body {
   margin-bottom: 30px;
 }
 
+/* Muundo wa "Matrix" (safu zenye idadi maalum ya kadi) kwa sehemu zenye kadi nyingi
+   (Mwanzo ya Akiba/Hisa/Mikopo, na Mikopo dashboard) - inaonekana vizuri zaidi
+   kuliko auto-fit inapokuwa na kadi 6+ kwenye desktop pana */
+#savingsOverviewStats,
+#loansStatsCards {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (min-width: 1400px) {
+  #savingsOverviewStats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 .stat-card {
   background: white;
   border-radius: 16px;
@@ -303,6 +317,8 @@ body {
 .expense .stat-icon { background: linear-gradient(135deg, #e74c3c, #c0392b); }
 .balance .stat-icon { background: linear-gradient(135deg, #3498db, #2980b9); }
 .members .stat-icon { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+.active-members .stat-icon { background: linear-gradient(135deg, #16a085, #1abc9c); }
+.inactive-members .stat-icon { background: linear-gradient(135deg, #95a5a6, #7f8c8d); }
 
 .stat-info {
   flex: 1;
@@ -899,6 +915,23 @@ tr:hover {
   margin-top: 20px;
 }
 
+/* Gundua (Discover) - muundo wa Matrix unaofaa kwa desktop na simu */
+#discoverFundsGrid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 992px) {
+  #discoverFundsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  #discoverFundsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .account-card {
   border: 1px solid #eef2f6;
   border-radius: 14px;
@@ -1156,7 +1189,9 @@ tr:hover {
     display: none;
   }
   
-  .stats-cards {
+  .stats-cards,
+  #savingsOverviewStats,
+  #loansStatsCards {
     grid-template-columns: repeat(2, 1fr);
   }
 }
@@ -1177,7 +1212,9 @@ tr:hover {
     padding: 20px;
   }
   
-  .stats-cards {
+  .stats-cards,
+  #savingsOverviewStats,
+  #loansStatsCards {
     grid-template-columns: 1fr;
     gap: 15px;
   }
@@ -1538,7 +1575,8 @@ tr:hover {
             <select id="accountType" onchange="toggleOrganizationName()">
               <option value="" selected disabled>-chagua aina-</option>
               <option value="personal">Akaunti Binafsi</option>
-              <option value="organization">Shirika/Kikundi</option>
+              <option value="organization">Shirika/Kikundi (Mchango na Matumizi)</option>
+              <option value="savings_group">Shirika/Kikundi (Akiba, Hisa na Mikopo)</option>
             </select>
           </div>
           
@@ -1752,6 +1790,11 @@ tr:hover {
               <i class="fas fa-exchange-alt"></i> Miamala
             </a>
           </li>
+          <li id="loansMenuItem" class="hidden" style="display: none;">
+            <a href="#" onclick="showDashboard('loans')" id="loansMenu">
+              <i class="fas fa-hand-holding-usd"></i> Mikopo
+            </a>
+          </li>
           <li>
             <a href="#" onclick="showDashboard('reports')" id="reportsMenu">
               <i class="fas fa-chart-bar"></i> Ripoti
@@ -1824,6 +1867,28 @@ tr:hover {
       <p id="membersLabel">Wanachama Wote</p>
     </div>
   </div>
+  
+  <!-- Active Members Card - Will be hidden for personal accounts -->
+  <div class="stat-card active-members hidden" id="activeMembersCard">
+    <div class="stat-icon">
+      <i class="fas fa-user-check"></i>
+    </div>
+    <div class="stat-info">
+      <h3 id="activeMembersCount">0</h3>
+      <p>Wanachama Hai (Active)</p>
+    </div>
+  </div>
+  
+  <!-- Inactive Members Card - Will be hidden for personal accounts -->
+  <div class="stat-card inactive-members hidden" id="inactiveMembersCard">
+    <div class="stat-icon">
+      <i class="fas fa-user-slash"></i>
+    </div>
+    <div class="stat-info">
+      <h3 id="inactiveMembersCount">0</h3>
+      <p>Wanachama Wasio Hai (Inactive)</p>
+    </div>
+  </div>
 </div>
   
   <!-- In Overview Dashboard, add Pending Transactions section -->
@@ -1839,6 +1904,156 @@ tr:hover {
     <div style="text-align: center; padding: 20px; color: #666;">
       <i class="fas fa-spinner fa-spin"></i> Inapakia...
     </div>
+  </div>
+</div>
+
+<!-- Savings Group (Akiba, Hisa na Mikopo) Overview - inaonekana kwa aina hii ya akaunti pekee -->
+<div id="savingsOverviewSection" class="hidden">
+  <div id="savingsOverviewStats" class="stats-cards" style="margin-top: 30px;">
+    <div class="stat-card members">
+      <div class="stat-icon"><i class="fas fa-users"></i></div>
+      <div class="stat-info">
+        <h3 id="savTotalMembers">0</h3>
+        <p>Jumla ya Wanachama</p>
+      </div>
+    </div>
+    <div class="stat-card active-members">
+      <div class="stat-icon"><i class="fas fa-piggy-bank"></i></div>
+      <div class="stat-info">
+        <h3 id="savTotalSavings">0 TZS</h3>
+        <p>Akiba</p>
+      </div>
+    </div>
+    <div class="stat-card balance">
+      <div class="stat-icon"><i class="fas fa-chart-pie"></i></div>
+      <div class="stat-info">
+        <h3 id="savTotalShares">0 TZS</h3>
+        <p>Hisa</p>
+      </div>
+    </div>
+    <div class="stat-card income">
+      <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
+      <div class="stat-info">
+        <h3 id="savTotalLoanedOut">0 TZS</h3>
+        <p>Mkopo Kilichokopeshwa (Kinachozunguka)</p>
+      </div>
+    </div>
+    <div class="stat-card income">
+      <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+      <div class="stat-info">
+        <h3 id="savInterestCollected">0 TZS</h3>
+        <p>Faida Iliyotokana na Mkopo (Riba Iliyokusanywa)</p>
+      </div>
+    </div>
+    <div class="stat-card expense">
+      <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+      <div class="stat-info">
+        <h3 id="savExpectedInterest">0 TZS</h3>
+        <p>Faida Inayotarajiwa (Mikopo Inayozunguka)</p>
+      </div>
+    </div>
+    <div class="stat-card inactive-members">
+      <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+      <div class="stat-info">
+        <h3 id="savFinesCollected">0 TZS</h3>
+        <p>Faini Iliyokusanywa</p>
+      </div>
+    </div>
+    <div class="stat-card balance">
+      <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+      <div class="stat-info">
+        <h3 id="savTotalExcludingLoans">0 TZS</h3>
+        <p>Jumla ya Fedha Zote (Siyo Mikopo Inayozunguka)</p>
+      </div>
+    </div>
+    <div class="stat-card balance">
+      <div class="stat-icon"><i class="fas fa-coins"></i></div>
+      <div class="stat-info">
+        <h3 id="savTotalWithLoans">0 TZS</h3>
+        <p>Jumla ya Fedha Zote (Pamoja na Mikopo Inayozunguka)</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="chart-container" style="margin-top: 30px;">
+    <div class="dashboard-header" style="margin-bottom: 20px;">
+      <h4><i class="fas fa-compass"></i> Gundua (Discover)</h4>
+    </div>
+    <div id="discoverFundsGrid" class="accounts-grid">
+      <!-- Fund cards zitapakiwa hapa -->
+    </div>
+  </div>
+  
+  <div class="chart-container" style="margin-top: 30px;">
+    <div class="dashboard-header" style="margin-bottom: 15px;">
+      <h4><i class="fas fa-receipt"></i> Taarifa za Fedha</h4>
+    </div>
+    
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+      <button type="button" class="btn btn-success" id="discoverTabIncomeBtn" onclick="switchDiscoverInfoTab('Income')">
+        <i class="fas fa-arrow-down"></i> Taarifa za Mapato
+      </button>
+      <button type="button" class="btn btn-secondary" id="discoverTabExpenseBtn" onclick="switchDiscoverInfoTab('Expense')">
+        <i class="fas fa-arrow-up"></i> Taarifa za Matumizi
+      </button>
+    </div>
+    
+    <!-- Summary za Mapato -->
+    <div id="discoverIncomeSummary" class="stats-cards" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 15px;">
+      <div class="stat-card income">
+        <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
+        <div class="stat-info">
+          <h3 id="discoverIncomeTotalIncome">0 TZS</h3>
+          <p>Jumla ya Mapato</p>
+        </div>
+      </div>
+      <div class="stat-card expense">
+        <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
+        <div class="stat-info">
+          <h3 id="discoverIncomeTotalExpense">0 TZS</h3>
+          <p>Jumla ya Matumizi</p>
+        </div>
+      </div>
+      <div class="stat-card active-members">
+        <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+        <div class="stat-info">
+          <h3 id="discoverIncomeNet">0 TZS</h3>
+          <p>Halisi</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Summary za Matumizi -->
+    <div id="discoverExpenseSummary" class="stats-cards hidden" style="grid-template-columns: repeat(1, 1fr); margin-bottom: 15px; display: none;">
+      <div class="stat-card expense">
+        <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
+        <div class="stat-info">
+          <h3 id="discoverExpenseTotal">0 TZS</h3>
+          <p>Jumla ya Matumizi</p>
+        </div>
+      </div>
+    </div>
+    
+    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+      Yamepangwa kwa tarehe (mapya juu). Rekodi 10 za mwisho zinaonekana kwanza.
+    </p>
+    <div class="table-responsive">
+      <table id="discoverExpensesTable">
+        <thead>
+          <tr>
+            <th>Tarehe</th>
+            <th>Maelezo</th>
+            <th>Category</th>
+            <th>Mfuko</th>
+            <th>Kiasi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Taarifa zitapakiwa hapa -->
+        </tbody>
+      </table>
+    </div>
+    <div id="discoverExpensesMoreBtnContainer"></div>
   </div>
 </div>
 
@@ -1897,7 +2112,7 @@ tr:hover {
   </div>
   
   <!-- Charts Section -->
-  <div class="chart-container" style="margin-top: 30px;">
+  <div class="chart-container" style="margin-top: 30px;" id="overviewChartSection">
     <div class="chart-header">
       <h4>Mapato dhidi ya Matumizi (Miezi 6 ya Nyuma)</h4>
       <select id="chartPeriod" class="btn btn-sm" onchange="updateChart()">
@@ -1909,6 +2124,7 @@ tr:hover {
   </div>
   
   <!-- Recent Transactions -->
+  <div id="overviewRecentTransactionsSection">
   <div class="dashboard-header" style="margin-top: 30px;">
     <h4><i class="fas fa-history"></i> Miamala ya Hivi Karibuni</h4>
     <button class="btn btn-sm btn-primary" onclick="showDashboard('transactions')">
@@ -1931,6 +2147,7 @@ tr:hover {
         <!-- Transactions will be loaded here -->
       </tbody>
     </table>
+  </div>
   </div>
 </div>
 
@@ -2240,24 +2457,17 @@ tr:hover {
             <div class="form-row">
               <div class="input-group">
                 <label for="transactionType"><i class="fas fa-exchange-alt"></i> Aina ya Muamala</label>
-                <select id="transactionType">
+                <select id="transactionType" onchange="toggleSavingsTransactionFields()">
                   <option value="Income">Mapato</option>
                   <option value="Expense">Matumizi</option>
-                  <option value="Loan">Mkopo</option>
-                  <option value="Repayment">Malipo ya Mkopo</option>
+                  <option value="Loan" id="txnTypeLoanOption">Mkopo</option>
+                  <option value="Repayment" id="txnTypeRepaymentOption">Malipo ya Mkopo</option>
                 </select>
               </div>
               
               <div class="input-group">
-                <label for="transactionAmount"><i class="fas fa-money-bill-wave"></i> Kiasi (TZS)</label>
-                <input type="number" id="transactionAmount" placeholder="0.00" min="0" step="0.01">
-              </div>
-            </div>
-            
-            <div class="form-row">
-              <div class="input-group">
                 <label for="transactionCategory"><i class="fas fa-tags"></i> Kategoria</label>
-                <select id="transactionCategory">
+                <select id="transactionCategory" onchange="onTransactionCategoryChange()">
                   <option value="Membership Fee">Ada ya Uanachama</option>
                   <option value="Donation">Michango</option>
                   <option value="Event Registration">Usajili wa Hafla</option>
@@ -2267,11 +2477,41 @@ tr:hover {
                   <option value="Other">Nyingine</option>
                 </select>
               </div>
+            </div>
+            
+            <div class="form-row">
+              <div class="input-group">
+                <label for="transactionAmount"><i class="fas fa-money-bill-wave"></i> Kiasi (TZS)</label>
+                <input type="number" id="transactionAmount" placeholder="0.00" min="0" step="0.01">
+              </div>
               
               <div class="input-group">
                 <label for="transactionDate"><i class="fas fa-calendar"></i> Tarehe</label>
                 <input type="date" id="transactionDate">
               </div>
+            </div>
+            
+            <!-- Sehemu za ziada kwa akaunti za Akiba, Hisa na Mikopo pekee -->
+            <div class="input-group hidden" id="savingsFineGroup">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="includeFineCheckbox" style="width: 18px; height: 18px;">
+                <span><i class="fas fa-exclamation-triangle"></i> Jumuisha Faini kwenye muamala huu (hiari - kiasi kinajazwa kiotomatiki kutoka Mipangilio)</span>
+              </label>
+            </div>
+            
+            <div class="input-group hidden" id="savingsSourceGroup">
+              <label for="transactionSourceFund"><i class="fas fa-piggy-bank"></i> Chanzo cha Fedha (Mfuko)</label>
+              <select id="transactionSourceFund" onchange="updateExpenseSourceFundBalance()">
+                <option value="">-- Chagua Mfuko --</option>
+                <option value="Akiba">Akiba</option>
+                <option value="Hisa">Hisa</option>
+                <option value="Faini">Faini</option>
+                <option value="Ada ya Uanachama">Ada ya Uanachama</option>
+                <option value="Riba ya Mkopo">Riba ya Mkopo</option>
+              </select>
+              <small id="transactionSourceFundBalance" style="color: #666; display: block; margin-top: 5px;">
+                <i class="fas fa-info-circle"></i> Matumizi haya yatatolewa moja kwa moja kwenye mfuko huu
+              </small>
             </div>
             
             <div class="form-row">
@@ -2357,6 +2597,52 @@ tr:hover {
             </div>
           </div>
           
+          <!-- Tabs za Mapato/Matumizi - kwa akaunti za Akiba, Hisa na Mikopo pekee -->
+          <div id="savingsTransactionTabs" class="hidden" style="display: none; gap: 10px; margin-bottom: 15px;">
+            <button type="button" class="btn btn-success" id="tabMapatoBtn" onclick="switchSavingsTransactionTab('Income')">
+              <i class="fas fa-arrow-down"></i> Mapato
+            </button>
+            <button type="button" class="btn btn-secondary" id="tabMatumiziBtn" onclick="switchSavingsTransactionTab('Expense')">
+              <i class="fas fa-arrow-up"></i> Matumizi
+            </button>
+          </div>
+          
+          <!-- Summary za Mapato -->
+          <div id="miamalaIncomeSummary" class="stats-cards hidden" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 15px; display: none;">
+            <div class="stat-card income">
+              <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
+              <div class="stat-info">
+                <h3 id="miamalaIncomeTotalIncome">0 TZS</h3>
+                <p>Jumla ya Mapato</p>
+              </div>
+            </div>
+            <div class="stat-card expense">
+              <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
+              <div class="stat-info">
+                <h3 id="miamalaIncomeTotalExpense">0 TZS</h3>
+                <p>Jumla ya Matumizi</p>
+              </div>
+            </div>
+            <div class="stat-card active-members">
+              <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+              <div class="stat-info">
+                <h3 id="miamalaIncomeNet">0 TZS</h3>
+                <p>Halisi</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Summary za Matumizi -->
+          <div id="miamalaExpenseSummary" class="stats-cards hidden" style="grid-template-columns: repeat(1, 1fr); margin-bottom: 15px; display: none;">
+            <div class="stat-card expense">
+              <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
+              <div class="stat-info">
+                <h3 id="miamalaExpenseTotal">0 TZS</h3>
+                <p>Jumla ya Matumizi</p>
+              </div>
+            </div>
+          </div>
+          
           <!-- Transactions Table -->
           <div class="table-responsive">
             <table id="transactionsTable">
@@ -2375,6 +2661,120 @@ tr:hover {
                 <!-- Transactions will be loaded here -->
               </tbody>
             </table>
+          </div>
+        </div>
+        
+        <!-- Loans Dashboard (Mikopo) - kwa akaunti za Akiba, Hisa na Mikopo pekee -->
+        <div id="loansDashboard" class="dashboard-section hidden">
+          <div class="dashboard-header">
+            <div>
+              <h3><i class="fas fa-hand-holding-usd"></i> Mikopo</h3>
+              <p>Toa na simamia mikopo ya wanachama</p>
+            </div>
+            <div class="action-buttons">
+              <button class="btn btn-primary" onclick="loadLoansDashboard()">
+                <i class="fas fa-sync-alt"></i> Sasisha
+              </button>
+            </div>
+          </div>
+          
+          <div id="loansStatsCards" class="stats-cards">
+            <div class="stat-card balance">
+              <div class="stat-icon"><i class="fas fa-coins"></i></div>
+              <div class="stat-info">
+                <h3 id="loansActiveCount">0</h3>
+                <p>Mikopo Inayozunguka</p>
+              </div>
+            </div>
+            <div class="stat-card income">
+              <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
+              <div class="stat-info">
+                <h3 id="loansActiveTotal">0 TZS</h3>
+                <p>Jumla Iliyokopeshwa (Inayozunguka)</p>
+              </div>
+            </div>
+            <div class="stat-card expense">
+              <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+              <div class="stat-info">
+                <h3 id="loansExpectedInterest">0 TZS</h3>
+                <p>Riba Inayotarajiwa</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Disburse Loan Form -->
+          <div class="chart-container" style="margin-top: 20px;">
+            <h4><i class="fas fa-plus-circle"></i> Toa Mkopo Mpya</h4>
+            
+            <div class="input-group">
+              <label for="loanMemberSelect"><i class="fas fa-user"></i> Mwanachama</label>
+              <select id="loanMemberSelect">
+                <option value="">-- Chagua Mwanachama --</option>
+              </select>
+            </div>
+            
+            <div class="input-group">
+              <label for="loanSourceFund"><i class="fas fa-piggy-bank"></i> Mfuko wa Kukopesha</label>
+              <select id="loanSourceFund" onchange="updateLoanSourceFundBalance()">
+                <option value="">-- Chagua Mfuko --</option>
+                <option value="Akiba">Akiba</option>
+                <option value="Hisa">Hisa</option>
+                <option value="Faini">Faini</option>
+                <option value="Ada ya Uanachama">Ada ya Uanachama</option>
+                <option value="Riba ya Mkopo">Riba ya Mkopo</option>
+              </select>
+              <small id="loanSourceFundBalance" style="color: #666; display: block; margin-top: 5px;"></small>
+            </div>
+            
+            <div class="input-group">
+              <label for="loanPrincipalAmount"><i class="fas fa-money-bill-wave"></i> Kiasi cha Mkopo</label>
+              <input type="number" id="loanPrincipalAmount" placeholder="0.00" min="0" step="0.01" oninput="updateLoanPreview()">
+            </div>
+            
+            <div class="input-group">
+              <label for="loanDueDate"><i class="fas fa-calendar-alt"></i> Tarehe ya Kurejesha (hiari)</label>
+              <input type="date" id="loanDueDate">
+            </div>
+            
+            <div class="input-group">
+              <label for="loanNotes"><i class="fas fa-sticky-note"></i> Maelezo (hiari)</label>
+              <input type="text" id="loanNotes" placeholder="maelezo zaidi...">
+            </div>
+            
+            <div id="loanPreviewBox" style="background: #f8fafc; border: 1px solid #eef2f6; border-radius: 10px; padding: 14px; margin-bottom: 15px; font-size: 13.5px;">
+              <div>Asilimia ya Riba: <strong id="loanPreviewRate">0%</strong></div>
+              <div>Riba: <strong id="loanPreviewInterest">0 TZS</strong></div>
+              <div>Jumla ya Kulipa: <strong id="loanPreviewTotal">0 TZS</strong></div>
+            </div>
+            
+            <button class="btn btn-success" onclick="submitDisburseLoan()" style="width: 100%;">
+              <i class="fas fa-hand-holding-usd"></i> Toa Mkopo
+            </button>
+          </div>
+          
+          <!-- Loans Table -->
+          <div class="chart-container" style="margin-top: 20px;">
+            <h4><i class="fas fa-list"></i> Orodha ya Mikopo</h4>
+            <div class="table-responsive">
+              <table id="loansTable">
+                <thead>
+                  <tr>
+                    <th>Mwanachama</th>
+                    <th>Mfuko</th>
+                    <th>Mtaji</th>
+                    <th>Riba</th>
+                    <th>Jumla</th>
+                    <th>Kimelipwa</th>
+                    <th>Salio</th>
+                    <th>Hali</th>
+                    <th>Vitendo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Loans will be loaded here -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
         
@@ -2511,6 +2911,107 @@ tr:hover {
     <div id="saveSettingsLoading" style="display: none; font-size: 12px; color: #666; margin-top: 5px; text-align: center;">
       <i class="fas fa-spinner fa-spin"></i> Inahifadhi mipangilio...
     </div>
+  </div>
+  
+  <!-- Savings Group Settings (Akiba, Hisa na Mikopo) - inaonekana kwa aina hii ya akaunti pekee -->
+  <div class="chart-container hidden" style="margin-top: 30px;" id="savingsGroupSettingsSection">
+    <h4><i class="fas fa-piggy-bank"></i> Mipangilio ya Akiba, Hisa na Mikopo</h4>
+    
+    <div class="input-group">
+      <label for="settingTargetAmount"><i class="fas fa-bullseye"></i> Kiasi Lengwa (Target)</label>
+      <input type="number" id="settingTargetAmount" placeholder="0.00" min="0" step="0.01">
+    </div>
+    
+    <div class="input-group">
+      <label for="settingInterestRate"><i class="fas fa-percentage"></i> Asilimia ya Riba (kwa Mkopo)</label>
+      <input type="number" id="settingInterestRate" placeholder="0" min="0" step="0.01">
+      <small style="color: #666; display: block; margin-top: 5px;">
+        <i class="fas fa-info-circle"></i> Riba hii itatumika kila mkopo mpya unapotolewa (mfano 10 = 10%)
+      </small>
+    </div>
+    
+    <div class="input-group">
+      <label for="settingFineAmount"><i class="fas fa-exclamation-triangle"></i> Kiasi cha Faini (chaguo-msingi)</label>
+      <input type="number" id="settingFineAmount" placeholder="0.00" min="0" step="0.01">
+    </div>
+    
+    <div class="input-group">
+      <label for="settingMembershipFee"><i class="fas fa-id-card"></i> Ada ya Uanachama</label>
+      <input type="number" id="settingMembershipFee" placeholder="0.00" min="0" step="0.01">
+    </div>
+    
+    <button class="btn btn-success" onclick="saveSavingsGroupSettings()" id="saveSavingsGroupSettingsBtn">
+      <i class="fas fa-save"></i> Hifadhi Mipangilio Haya
+    </button>
+    <div id="saveSavingsGroupSettingsLoading" style="display: none; font-size: 12px; color: #666; margin-top: 5px; text-align: center;">
+      <i class="fas fa-spinner fa-spin"></i> Inahifadhi...
+    </div>
+    
+    <hr style="margin: 25px 0; border: none; border-top: 1px solid #eef2f6;">
+    
+    <h4><i class="fas fa-percentage"></i> Makundi ya Mgawo wa Kiasi (Allocation Groups)</h4>
+    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+      Kila mchango wa "Income" utagawanywa kiotomatiki kulingana na makundi haya. Mfano:
+      TZS 4,000 ukiwa na 75% Hisa na 25% Akiba, utagawanyika kuwa TZS 3,000 kwenye Hisa na
+      TZS 1,000 kwenye Akiba. Unaweza kuweka kundi moja (100%), mawili, au zaidi.
+    </p>
+    
+    <div id="allocationGroupsList"></div>
+    
+    <button class="btn btn-secondary" onclick="addAllocationGroupRow()" style="margin-top: 10px;">
+      <i class="fas fa-plus"></i> Ongeza Kundi
+    </button>
+    
+    <div style="margin-top: 12px; font-weight: 600;">
+      Jumla ya Asilimia: <span id="allocationGroupsTotalPercent">0</span>%
+      <span id="allocationGroupsTotalWarning" style="color: var(--danger); font-weight: 600; display: none;">
+        (Jumla lazima isizidi 100%)
+      </span>
+    </div>
+    
+    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eef2f6;">
+    
+    <h5 style="margin-bottom: 8px;"><i class="fas fa-tags"></i> Categories Zinazogawanyika</h5>
+    <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+      Chagua Category (moja au zaidi) ambazo mchango wake utagawanywa kulingana na Makundi ya
+      Mgawo hapo juu. Categories za "Akiba", "Hisa", "Faini" na "Riba ya Mkopo" HAZIONESHWI
+      hapa kwa makusudi - zenyewe ni mifuko ya msingi (pool) na HUINGIA MOJA KWA MOJA humo
+      bila kugawanyika. Category isiyochaguliwa hapa (mfano "Mchango wa Mwanachama") itaingia
+      moja kwa moja kwenye Mfuko wa Akiba kwa chaguo-msingi.
+    </p>
+    <div id="splitCategoriesList" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;"></div>
+    
+    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eef2f6;">
+    
+    <h5 style="margin-bottom: 8px;"><i class="fas fa-plus-circle"></i> Ongeza Category ya Mapato Mpya</h5>
+    <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+      Category mpya utakayoongeza hapa itapata Mfuko wake wenyewe kwenye "Gundua" kiotomatiki,
+      na itaonekana pia kwenye fomu ya Miamala (Mapato).
+    </p>
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+      <input type="text" id="newCategoryNameInput" placeholder="mfano: Mfuko wa Dharura" style="flex: 1;">
+      <button class="btn btn-primary" onclick="addCustomCategory()">
+        <i class="fas fa-plus"></i> Ongeza
+      </button>
+    </div>
+    
+    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eef2f6;">
+    
+    <h5 style="margin-bottom: 8px;"><i class="fas fa-plus-circle"></i> Ongeza Category ya Matumizi Mpya</h5>
+    <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+      Category hii itaonekana kwenye fomu ya Miamala (Matumizi). Haihitaji mfuko wake
+      mwenyewe - chanzo cha fedha kinachaguliwa tofauti wakati wa kuingiza muamala.
+    </p>
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+      <input type="text" id="newExpenseCategoryNameInput" placeholder="mfano: Usafiri" style="flex: 1;">
+      <button class="btn btn-primary" onclick="addCustomExpenseCategoryUI()">
+        <i class="fas fa-plus"></i> Ongeza
+      </button>
+    </div>
+    
+    <button class="btn btn-success" onclick="saveAllocationGroups()" style="margin-top: 15px;">
+      <i class="fas fa-save"></i> Hifadhi Makundi ya Mgawo
+    </button>
   </div>
   
  <!-- Auto Increment Settings -->
@@ -2717,7 +3218,7 @@ tr:hover {
 
 
 <!-- Account Type Change Section -->
-<div class="chart-container" style="margin-top: 30px; border: 2px solid #f39c12;">
+<div class="chart-container" style="margin-top: 30px; border: 2px solid #f39c12;" id="accountTypeChangeSection">
   <h4 style="color: #f39c12;">
     <i class="fas fa-exchange-alt"></i> Badilisha Aina ya Akaunti
   </h4>
@@ -2820,7 +3321,7 @@ tr:hover {
 
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxznaQRk1nfVCfKNRMJpoDxwVMd8R2aa_UP3ilSXz7ekTZ1zV-VNm7b398_pJYxMr8t/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNTnb9MhrNdEATFw4SG_fCK0WVhWwnvAJvYbsPlIn48TYapAOMTiZPkiDTNcDQoJU8/exec";
     let currentDbId = null;
     let currentOrganization = '';
     let currentUserEmail = '';
@@ -2865,8 +3366,17 @@ document.addEventListener('DOMContentLoaded', function() {
     currentOrganization = savedOrganization;
     currentUserEmail = savedEmail || '';
     
+    // Rudisha aina ya akaunti mara moja ili menyu (kama "Mikopo") isipotee wakati wa refresh
+    const savedAccountType = localStorage.getItem('accountType');
+    if (savedAccountType) {
+      currentAccountType = savedAccountType;
+    }
+    
     // Show main dashboard
     showMainDashboard();
+    
+    // Hakikisha menyu (Wanachama, Mikopo, n.k.) zinaonekana sahihi mara moja
+    adjustStatsGridForAccountType();
     
     // Initialize transaction form
     initializeTransactionForm();
@@ -3042,6 +3552,20 @@ function initializeTransactionForm() {
 function adjustStatsGridForAccountType() {
   const statsGrid = document.getElementById('mainAccountStats');
   const membersCard = document.getElementById('membersCard');
+  const activeMembersCard = document.getElementById('activeMembersCard');
+  const inactiveMembersCard = document.getElementById('inactiveMembersCard');
+  
+  // Onesha kipengele cha "Mikopo" kwenye menyu kwa akaunti za Akiba/Hisa/Mikopo pekee
+  const loansMenuItem = document.getElementById('loansMenuItem');
+  if (loansMenuItem) {
+    if (currentAccountType === 'savings_group') {
+      loansMenuItem.style.display = 'block';
+      loansMenuItem.classList.remove('hidden');
+    } else {
+      loansMenuItem.style.display = 'none';
+      loansMenuItem.classList.add('hidden');
+    }
+  }
   
   if (!statsGrid || !membersCard) return;
   
@@ -3049,6 +3573,8 @@ function adjustStatsGridForAccountType() {
     // Hide members card completely
     membersCard.style.display = 'none';
     membersCard.classList.add('hidden');
+    if (activeMembersCard) { activeMembersCard.style.display = 'none'; activeMembersCard.classList.add('hidden'); }
+    if (inactiveMembersCard) { inactiveMembersCard.style.display = 'none'; inactiveMembersCard.classList.add('hidden'); }
     
     // Set grid to 3 columns
     statsGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
@@ -3062,6 +3588,8 @@ function adjustStatsGridForAccountType() {
     // Show members card for organizations
     membersCard.style.display = 'flex';
     membersCard.classList.remove('hidden');
+    if (activeMembersCard) { activeMembersCard.style.display = 'flex'; activeMembersCard.classList.remove('hidden'); }
+    if (inactiveMembersCard) { inactiveMembersCard.style.display = 'flex'; inactiveMembersCard.classList.remove('hidden'); }
     
     // Reset grid to auto-fit
     statsGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(240px, 1fr))';
@@ -3098,8 +3626,18 @@ function showMainDashboard() {
     document.body.classList.remove('personal-account');
   }
   
-  // Load dashboard data
-  showDashboard('overview');
+  // Load dashboard data - rudisha dashibodi ya mwisho aliyokuwepo mtumiaji (siyo Mwanzo kila
+  // wakati), ili refresh isimtoe alipokuwa. Mtumiaji ndiye pekee anayebadilisha kwa kubofya.
+  var dashboardToRestore = 'overview';
+  try {
+    var savedDashboard = localStorage.getItem('lastActiveDashboard');
+    if (savedDashboard) dashboardToRestore = savedDashboard;
+  } catch (e) {}
+  // "Mikopo" ni ya akaunti za Akiba, Hisa na Mikopo pekee - usirudishe kwa akaunti nyingine
+  if (dashboardToRestore === 'loans' && currentAccountType !== 'savings_group') {
+    dashboardToRestore = 'overview';
+  }
+  showDashboard(dashboardToRestore);
 }
 
 // Add this with other global variables at the top
@@ -3495,17 +4033,30 @@ function loadOverview() {
       currentAccountType = data.accountType;
       localStorage.setItem('accountType', currentAccountType);
       
+      // Hakikisha menyu (Mikopo, Wanachama, n.k.) haziwahi kupotea baada ya refresh
+      adjustStatsGridForAccountType();
+      
       // Hide/show sections based on account type
       if (currentAccountType === 'personal') {
         // Hide pending transactions ONLY, but show member accounts
         document.getElementById('pendingTransactionsSection').style.display = 'none';
         document.getElementById('memberAccountsContainer').style.display = 'block';
         
-        // COMPLETELY HIDE TOTAL MEMBERS CARD FOR PERSONAL ACCOUNTS
+        // COMPLETELY HIDE TOTAL/ACTIVE/INACTIVE MEMBERS CARDS FOR PERSONAL ACCOUNTS
         const membersCard = document.querySelector('.stat-card.members');
         if (membersCard) {
           membersCard.style.display = 'none';
           membersCard.classList.add('hidden');
+        }
+        const activeMembersCard = document.getElementById('activeMembersCard');
+        if (activeMembersCard) {
+          activeMembersCard.style.display = 'none';
+          activeMembersCard.classList.add('hidden');
+        }
+        const inactiveMembersCard = document.getElementById('inactiveMembersCard');
+        if (inactiveMembersCard) {
+          inactiveMembersCard.style.display = 'none';
+          inactiveMembersCard.classList.add('hidden');
         }
         
         // Adjust stats grid for 3 cards
@@ -3516,15 +4067,59 @@ function loadOverview() {
         
         // Load member accounts for personal account
         loadMemberAccounts();
+      } else if (currentAccountType === 'savings_group') {
+        // ============ SHIRIKA/KIKUNDI (AKIBA, HISA NA MIKOPO) ============
+        document.getElementById('pendingTransactionsSection').style.display = 'none';
+        document.getElementById('memberAccountsContainer').style.display = 'none';
+        document.getElementById('mainAccountStats').style.display = 'none';
+        
+        // Ficha kabisa Chati na "Miamala ya Hivi Karibuni" za muundo wa akaunti nyingine
+        // (Mchango na Matumizi / Binafsi) - akaunti hii ina muundo wake wa Gundua badala yake
+        const chartSection = document.getElementById('overviewChartSection');
+        if (chartSection) chartSection.style.display = 'none';
+        const recentTxSection = document.getElementById('overviewRecentTransactionsSection');
+        if (recentTxSection) recentTxSection.style.display = 'none';
+        
+        const savingsSection = document.getElementById('savingsOverviewSection');
+        if (savingsSection) {
+          savingsSection.style.display = 'block';
+          savingsSection.classList.remove('hidden');
+        }
+        
+        loadSavingsOverview();
       } else {
         document.getElementById('pendingTransactionsSection').style.display = 'block';
         document.getElementById('memberAccountsContainer').style.display = 'block';
+        document.getElementById('mainAccountStats').style.display = 'grid';
         
-        // Show total members card for organization accounts
+        // Hakikisha Chati na "Miamala ya Hivi Karibuni" zinaonekana (endapo zilifichwa
+        // hapo awali na akaunti ya Akiba, Hisa na Mikopo)
+        const chartSection = document.getElementById('overviewChartSection');
+        if (chartSection) chartSection.style.display = 'block';
+        const recentTxSection = document.getElementById('overviewRecentTransactionsSection');
+        if (recentTxSection) recentTxSection.style.display = 'block';
+        
+        const savingsSection = document.getElementById('savingsOverviewSection');
+        if (savingsSection) {
+          savingsSection.style.display = 'none';
+          savingsSection.classList.add('hidden');
+        }
+        
+        // Show total/active/inactive members cards for organization accounts
         const membersCard = document.querySelector('.stat-card.members');
         if (membersCard) {
           membersCard.style.display = 'flex';
           membersCard.classList.remove('hidden');
+        }
+        const activeMembersCard = document.getElementById('activeMembersCard');
+        if (activeMembersCard) {
+          activeMembersCard.style.display = 'flex';
+          activeMembersCard.classList.remove('hidden');
+        }
+        const inactiveMembersCard = document.getElementById('inactiveMembersCard');
+        if (inactiveMembersCard) {
+          inactiveMembersCard.style.display = 'flex';
+          inactiveMembersCard.classList.remove('hidden');
         }
         
         // Reset stats grid to 4 cards
@@ -3541,29 +4136,32 @@ function loadOverview() {
     }
   });
   
-  // Load main account stats
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify({
-      action: 'getTransactionSummary',
-      dbId: currentDbId,
-      period: 'all',
-      accountType: currentAccountType
+  // Load main account stats (siyo kwa akaunti za Akiba, Hisa na Mikopo - zina takwimu zake
+  // zenyewe kupitia loadSavingsOverview() badala yake)
+  if (currentAccountType !== 'savings_group') {
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'getTransactionSummary',
+        dbId: currentDbId,
+        period: 'all',
+        accountType: currentAccountType
+      })
     })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.status === 'success') {
-      updateOverviewStats(data.summary);
-      loadChartData();
-    }
-  })
-  .catch(error => {
-    console.log('Error loading overview summary:', error.message);
-  });
-  
-  // Load recent transactions
-  loadRecentTransactionsSilently();
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        updateOverviewStats(data.summary);
+        loadChartData();
+      }
+    })
+    .catch(error => {
+      console.log('Error loading overview summary:', error.message);
+    });
+    
+    // Load recent transactions
+    loadRecentTransactionsSilently();
+  }
 }
 
 
@@ -3609,15 +4207,21 @@ function showDashboard(dashboard) {
     closeMemberAccountView();
   }
   
+  // Kumbuka dashibodi iliyochaguliwa ili ibaki hivyo hata baada ya refresh
+  // (mtumiaji ndiye pekee anayeweza kubadilisha - siyo refresh)
+  if (dashboard !== 'memberAccountView' && dashboard !== 'accountTypeChange') {
+    try { localStorage.setItem('lastActiveDashboard', dashboard); } catch (e) {}
+  }
+  
   // Hide all dashboards
-  const dashboards = ['overview', 'members', 'transactions', 'reports', 'settings', 'memberAccountView', 'accountTypeChange'];
+  const dashboards = ['overview', 'members', 'transactions', 'loans', 'reports', 'settings', 'memberAccountView', 'accountTypeChange'];
   dashboards.forEach(id => {
     const element = document.getElementById(id + 'Dashboard');
     if (element) element.classList.add('hidden');
   });
   
   // Remove active from all menus
-  const menus = ['overview', 'members', 'transactions', 'reports', 'settings', 'accountTypeChange'];
+  const menus = ['overview', 'members', 'transactions', 'loans', 'reports', 'settings', 'accountTypeChange'];
   menus.forEach(id => {
     const menu = document.getElementById(id + 'Menu');
     if (menu) menu.classList.remove('active');
@@ -3636,15 +4240,18 @@ function showDashboard(dashboard) {
       break;
     case 'members':
       // Only load members for organization accounts
-      if (currentAccountType === 'organization') {
+      if ((currentAccountType === 'organization' || currentAccountType === 'savings_group')) {
         loadMembers();
       }
       break;
     case 'transactions':
       loadTransactions();
-      if (currentAccountType === 'organization') {
+      if ((currentAccountType === 'organization' || currentAccountType === 'savings_group')) {
         loadMembersForTransaction();
       }
+      break;
+    case 'loans':
+      loadLoansDashboard();
       break;
     case 'reports':
       loadReports();
@@ -3731,6 +4338,26 @@ function loadMembersCountSilently() {
       if (membersCountElement) {
         membersCountElement.textContent = data.total || 0;
       }
+      
+      // Hesabu Wanachama Hai (Active) na Wasio Hai (Inactive) kutoka kwenye Status
+      // ya kila mwanachama - Status hii inatokana na jumla ya miamala ya "Income" tu
+      // (siyo "Expense"), kama inavyowekwa na mfumo wa checkAllMembersStatus.
+      const activeCountElement = document.getElementById('activeMembersCount');
+      const inactiveCountElement = document.getElementById('inactiveMembersCount');
+      if (activeCountElement || inactiveCountElement) {
+        const members = data.members || [];
+        let activeCount = 0;
+        let inactiveCount = 0;
+        members.forEach(function(member) {
+          if (member.Status === 'Active') {
+            activeCount++;
+          } else {
+            inactiveCount++;
+          }
+        });
+        if (activeCountElement) activeCountElement.textContent = activeCount;
+        if (inactiveCountElement) inactiveCountElement.textContent = inactiveCount;
+      }
     }
   })
   .catch(error => {
@@ -3777,7 +4404,7 @@ function loadMembersCountSilently() {
   }
   
   // Only update members count for organization accounts
-  if (membersElement && currentAccountType === 'organization') {
+  if (membersElement && (currentAccountType === 'organization' || currentAccountType === 'savings_group')) {
     membersElement.textContent = summary.totalMembers || 0;
     // Show members card
     const membersCard = document.querySelector('.stat-card.members');
@@ -3785,13 +4412,33 @@ function loadMembersCountSilently() {
       membersCard.style.display = 'flex';
       membersCard.classList.remove('hidden');
     }
+    const activeMembersCard = document.getElementById('activeMembersCard');
+    if (activeMembersCard) {
+      activeMembersCard.style.display = 'flex';
+      activeMembersCard.classList.remove('hidden');
+    }
+    const inactiveMembersCard = document.getElementById('inactiveMembersCard');
+    if (inactiveMembersCard) {
+      inactiveMembersCard.style.display = 'flex';
+      inactiveMembersCard.classList.remove('hidden');
+    }
   } else {
-    // Hide members card for personal accounts
+    // Hide members cards for personal accounts
     const membersCard = document.querySelector('.stat-card.members');
     if (membersCard) {
       membersCard.style.display = 'none';
       membersCard.classList.add('hidden');
       membersElement.textContent = 'N/A';
+    }
+    const activeMembersCard = document.getElementById('activeMembersCard');
+    if (activeMembersCard) {
+      activeMembersCard.style.display = 'none';
+      activeMembersCard.classList.add('hidden');
+    }
+    const inactiveMembersCard = document.getElementById('inactiveMembersCard');
+    if (inactiveMembersCard) {
+      inactiveMembersCard.style.display = 'none';
+      inactiveMembersCard.classList.add('hidden');
     }
   }
 }
@@ -3870,7 +4517,7 @@ function updateMemberAccountTransactions(transactions, summary) {
   }
   
   // Get current member's status - ONLY FOR ORGANIZATIONS
-  if (currentAccountType === 'organization') {
+  if ((currentAccountType === 'organization' || currentAccountType === 'savings_group')) {
     fetch(SCRIPT_URL, {
       method: 'POST',
       body: JSON.stringify({
@@ -3982,7 +4629,12 @@ function updateMemberAccountTransactions(transactions, summary) {
 }
 
 
+let recentTransactionsRenderToken = 0;
+
 function updateRecentTransactionsTable(transactions) {
+  recentTransactionsRenderToken++;
+  const myRecentRenderToken = recentTransactionsRenderToken;
+  
   const tbody = document.getElementById('recentTransactionsTable').querySelector('tbody');
   tbody.innerHTML = '';
   
@@ -4056,6 +4708,7 @@ function updateRecentTransactionsTable(transactions) {
     })
     .then(res => res.json())
     .then(membersData => {
+      if (myRecentRenderToken !== recentTransactionsRenderToken) return;
       // Create a map of member ID to member status
       const memberStatusMap = {};
       if (membersData.status === 'success' && membersData.members) {
@@ -4943,7 +5596,7 @@ function updateMembersTable(members) {
   updateCategoriesForAccountType();
   
   // Load members only for organization accounts
-  if (currentAccountType === 'organization') {
+  if ((currentAccountType === 'organization' || currentAccountType === 'savings_group')) {
     loadMembersForTransaction();
     document.getElementById('transactionMemberId').parentElement.style.display = 'block';
     const label = document.querySelector('label[for="transactionMemberId"]');
@@ -4966,7 +5619,7 @@ function updateMembersTable(members) {
   
   // Add event listener for member selection (only for organizations)
   const memberSelect = document.getElementById('transactionMemberId');
-  if (memberSelect && currentAccountType === 'organization') {
+  if (memberSelect && (currentAccountType === 'organization' || currentAccountType === 'savings_group')) {
     // Remove any existing event listeners first
     const newMemberSelect = memberSelect.cloneNode(true);
     memberSelect.parentNode.replaceChild(newMemberSelect, memberSelect);
@@ -4978,6 +5631,58 @@ function updateMembersTable(members) {
         console.log('Selected member:', selectedOption.value, selectedOption.textContent);
       }
     });
+  }
+  
+  // Onesha/ficha sehemu za Faini/Chanzo cha Fedha kwa akaunti za Akiba, Hisa na Mikopo
+  toggleSavingsTransactionFields();
+  
+  // Pata kiasi cha Ada ya Uanachama na Categories za ziada kutoka Mipangilio
+  if (currentAccountType === 'savings_group') {
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getSystemSettings', dbId: currentDbId })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        cachedMembershipFee = parseFloat(data.settings['Membership Fee']) || 0;
+        try {
+          customIncomeCategories = JSON.parse(data.settings['Custom Income Categories'] || '[]');
+        } catch (e) {
+          customIncomeCategories = [];
+        }
+        try {
+          customExpenseCategories = JSON.parse(data.settings['Custom Expense Categories'] || '[]');
+        } catch (e) {
+          customExpenseCategories = [];
+        }
+        updateSavingsCategoriesForType(document.getElementById('transactionType').value);
+      }
+    })
+    .catch(error => console.error('Error loading membership fee:', error));
+    
+    // Jaza dropdown ya "Chanzo cha Fedha" (Matumizi) na mifuko yote (ikiwemo za ziada)
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getFundsSummary', dbId: currentDbId })
+    })
+    .then(res => res.json())
+    .then(data => {
+      const sourceSelect = document.getElementById('transactionSourceFund');
+      if (sourceSelect && data.status === 'success') {
+        const currentSelection = sourceSelect.value;
+        sourceSelect.innerHTML = '<option value="">-- Chagua Mfuko --</option>' +
+          (data.funds || []).map(f => `<option value="${f['Fund Name']}">${f['Fund Name']}</option>`).join('');
+        if (currentSelection) sourceSelect.value = currentSelection;
+        
+        cachedExpenseFundBalances = {};
+        (data.funds || []).forEach(f => {
+          cachedExpenseFundBalances[f['Fund Name']] = parseFloat(f['Pool Balance'] !== undefined ? f['Pool Balance'] : f['Total Amount']) || 0;
+        });
+        updateExpenseSourceFundBalance();
+      }
+    })
+    .catch(error => console.error('Error loading funds for source dropdown:', error));
   }
 }
     
@@ -4997,10 +5702,13 @@ function updateMembersTable(members) {
     function resetTransactionForm() {
   document.getElementById('transactionType').value = 'Income';
   document.getElementById('transactionAmount').value = '';
+  document.getElementById('transactionAmount').readOnly = false;
   
   // Set default category based on account type
   if (currentAccountType === 'personal') {
     document.getElementById('transactionCategory').value = 'Business';
+  } else if (currentAccountType === 'savings_group') {
+    updateSavingsCategoriesForType('Income');
   } else {
     document.getElementById('transactionCategory').value = 'Membership Fee';
   }
@@ -5009,6 +5717,9 @@ function updateMembersTable(members) {
   document.getElementById('transactionMemberId').value = '';
   document.getElementById('transactionDescription').value = '';
   document.getElementById('transactionStatus').value = 'Completed';
+  
+  const includeFineCheckbox = document.getElementById('includeFineCheckbox');
+  if (includeFineCheckbox) includeFineCheckbox.checked = false;
   
   // Reset member selection display
   const memberSelectParent = document.getElementById('transactionMemberId').parentElement;
@@ -5069,6 +5780,12 @@ function updateMembersTable(members) {
 }
     
     function registerTransaction() {
+  // Akaunti za "Shirika/Kikundi (Akiba, Hisa na Mikopo)" zina fomu/utaratibu wake tofauti
+  if (currentAccountType === 'savings_group') {
+    registerSavingsGroupTransaction();
+    return;
+  }
+  
   const transactionData = {
     transactionType: document.getElementById('transactionType').value,
     amount: document.getElementById('transactionAmount').value,
@@ -5142,6 +5859,292 @@ function updateMembersTable(members) {
       }
     } else {
       Notiflix.Notify.failure(data.message);
+    }
+  })
+  .catch(error => {
+    Notiflix.Loading.remove();
+    Notiflix.Notify.failure('Hitilafu ya mtandao: ' + error.message);
+  });
+}
+
+// ============ Miamala kwa Akaunti za Akiba, Hisa na Mikopo ============
+
+function toggleSavingsTransactionFields() {
+  const fineGroup = document.getElementById('savingsFineGroup');
+  const sourceGroup = document.getElementById('savingsSourceGroup');
+  const loanOption = document.getElementById('txnTypeLoanOption');
+  const repaymentOption = document.getElementById('txnTypeRepaymentOption');
+  if (!fineGroup || !sourceGroup) return;
+  
+  if (currentAccountType !== 'savings_group') {
+    fineGroup.style.display = 'none';
+    fineGroup.classList.add('hidden');
+    sourceGroup.style.display = 'none';
+    sourceGroup.classList.add('hidden');
+    if (loanOption) loanOption.classList.remove('hidden');
+    if (repaymentOption) repaymentOption.classList.remove('hidden');
+    return;
+  }
+  
+  // Kwa akaunti za Akiba, Hisa na Mikopo: aina za muamala zibaki mbili tu (Mapato, Matumizi).
+  // Mikopo na Marejesho yanashughulikiwa kwenye dashibodi maalum ya "Mikopo".
+  const typeSelect = document.getElementById('transactionType');
+  if (loanOption) loanOption.remove();
+  if (repaymentOption) repaymentOption.remove();
+  if (typeSelect && (typeSelect.value === 'Loan' || typeSelect.value === 'Repayment' || !typeSelect.value)) {
+    typeSelect.value = 'Income';
+  }
+  
+  const type = document.getElementById('transactionType').value;
+  
+  if (type === 'Income') {
+    fineGroup.style.display = 'block';
+    fineGroup.classList.remove('hidden');
+    sourceGroup.style.display = 'none';
+    sourceGroup.classList.add('hidden');
+  } else if (type === 'Expense') {
+    // Fomu ya matumizi HAIWEZI kuwa na faini wala mgawanyo - source pekee
+    fineGroup.style.display = 'none';
+    fineGroup.classList.add('hidden');
+    sourceGroup.style.display = 'block';
+    sourceGroup.classList.remove('hidden');
+  } else {
+    fineGroup.style.display = 'none';
+    fineGroup.classList.add('hidden');
+    sourceGroup.style.display = 'none';
+    sourceGroup.classList.add('hidden');
+  }
+  
+  // Kila aina ya muamala ina Categories zake husika
+  updateSavingsCategoriesForType(type);
+}
+
+// Categories husika kwa kila aina ya muamala (Akiba, Hisa na Mikopo)
+const SAVINGS_INCOME_CATEGORY_OPTIONS = [
+  ["Mchango wa Mwanachama", "Mchango wa Mwanachama"],
+  ["Akiba", "Akiba"],
+  ["Hisa", "Hisa"],
+  ["Ada ya Uanachama", "Ada ya Uanachama"],
+  ["Mengineyo", "Mengineyo"]
+];
+const SAVINGS_EXPENSE_CATEGORY_OPTIONS = [
+  ["Malipo ya Mkopo", "Malipo ya Mkopo"],
+  ["Uendeshaji", "Uendeshaji"],
+  ["Mikutano", "Mikutano"],
+  ["Vifaa vya Ofisi", "Vifaa vya Ofisi"],
+  ["Mengineyo", "Mengineyo"]
+];
+
+function updateSavingsCategoriesForType(type) {
+  if (currentAccountType !== 'savings_group') return;
+  
+  const categorySelect = document.getElementById('transactionCategory');
+  if (!categorySelect) return;
+  
+  var options = type === 'Expense' ? SAVINGS_EXPENSE_CATEGORY_OPTIONS.slice() : SAVINGS_INCOME_CATEGORY_OPTIONS.slice();
+  
+  // Ongeza Categories za ziada alizoongeza mtumiaji
+  if (type === 'Expense') {
+    customExpenseCategories.forEach(function(cat) {
+      options.push([cat, cat]);
+    });
+  } else {
+    customIncomeCategories.forEach(function(cat) {
+      options.push([cat, cat]);
+    });
+  }
+  
+  categorySelect.innerHTML = '<option value="">-- Chagua Category --</option>' +
+    options.map(function(c) { return `<option value="${c[0]}">${c[1]}</option>`; }).join('');
+  categorySelect.value = '';
+  
+  // Ondoa kiasi kilichojazwa kiotomatiki kutoka category ya awali (kama ipo)
+  onTransactionCategoryChange();
+}
+
+// Kiasi cha Ada ya Uanachama kinajazwa kiotomatiki kutoka Mipangilio
+let cachedMembershipFee = 0;
+
+function onTransactionCategoryChange() {
+  if (currentAccountType !== 'savings_group') return;
+  
+  const category = document.getElementById('transactionCategory').value;
+  const amountField = document.getElementById('transactionAmount');
+  if (!amountField) return;
+  
+  if (category === 'Ada ya Uanachama' && cachedMembershipFee > 0) {
+    // Ada ya Uanachama imesetiwa kwenye Mipangilio - jaza kiotomatiki na funga kubadilishwa
+    amountField.value = cachedMembershipFee;
+    amountField.readOnly = true;
+    amountField.title = 'Kiasi hiki kimejazwa kiotomatiki kutoka Mipangilio (Ada ya Uanachama)';
+  } else if (category === 'Ada ya Uanachama') {
+    // Ada ya Uanachama HAIJASETIWA bado kwenye Mipangilio - usimzuie mtumiaji, aandike mwenyewe
+    amountField.readOnly = false;
+    amountField.title = 'Ada ya Uanachama haijasetiwa kwenye Mipangilio - weka kiasi wewe mwenyewe (au iset kwenye Mipangilio kwa matumizi yajayo)';
+  } else {
+    amountField.readOnly = false;
+    amountField.title = '';
+  }
+}
+
+function registerSavingsGroupTransaction() {
+  const transactionType = document.getElementById('transactionType').value;
+  const amount = document.getElementById('transactionAmount').value;
+  const memberId = document.getElementById('transactionMemberId').value;
+  const description = document.getElementById('transactionDescription').value;
+  const date = document.getElementById('transactionDate').value;
+  const category = document.getElementById('transactionCategory').value;
+  
+  if (!amount || parseFloat(amount) <= 0) {
+    Notiflix.Notify.failure('Tafadhali weka kiasi sahihi');
+    return;
+  }
+  
+  if (!date) {
+    Notiflix.Notify.failure('Tarehe ni lazima');
+    return;
+  }
+  
+  if (!category) {
+    Notiflix.Notify.failure('Tafadhali chagua Category');
+    return;
+  }
+  
+  if (category === 'Mengineyo' && !description.trim()) {
+    Notiflix.Notify.failure('Kwa "Mengineyo", tafadhali andika maelezo ya muamala');
+    return;
+  }
+  
+  const transactionData = {
+    transactionType: transactionType,
+    amount: amount,
+    memberId: memberId,
+    description: description,
+    date: date,
+    category: category
+  };
+  
+  if (transactionType === 'Income') {
+    if (!memberId && !description) {
+      Notiflix.Notify.failure('Kwa mapato, lazima uchague mwanachama AU uandike maelezo');
+      return;
+    }
+    const includeFine = document.getElementById('includeFineCheckbox').checked;
+    transactionData.includeFine = includeFine;
+    // Kiasi cha faini kinajazwa kiotomatiki na server kutoka Mipangilio - hakihitajiki hapa
+  } else if (transactionType === 'Expense') {
+    const source = document.getElementById('transactionSourceFund').value;
+    if (!source) {
+      Notiflix.Notify.failure('Tafadhali chagua Mfuko (chanzo cha fedha) kwa matumizi haya');
+      return;
+    }
+    const sourceBalance = cachedExpenseFundBalances[source] !== undefined ? cachedExpenseFundBalances[source] : 0;
+    if (parseFloat(amount) > sourceBalance) {
+      Notiflix.Notify.failure(`Salio la ${source} halitoshi. Linalopatikana: ${formatCurrency(sourceBalance)}`);
+      return;
+    }
+    transactionData.source = source;
+  } else {
+    Notiflix.Notify.failure('Aina hii ya muamala haitumiki hapa - tumia ukurasa wa Mikopo kwa mikopo/marejesho');
+    return;
+  }
+  
+  // Pata jina la mwanachama aliyechaguliwa (kwa ajili ya ujumbe wa uthibitisho)
+  const memberSelect = document.getElementById('transactionMemberId');
+  const memberLabel = memberId && memberSelect.selectedIndex >= 0
+    ? memberSelect.options[memberSelect.selectedIndex].textContent
+    : (description || 'Hakuna jina');
+  
+  confirmAndSubmitSavingsTransaction(transactionData, memberLabel);
+}
+
+// Ujumbe wa kuthibitisha kabla ya kusajili muamala wowote (mtindo wa kisasa wa kifedha)
+function confirmAndSubmitSavingsTransaction(transactionData, memberLabel) {
+  const isIncome = transactionData.transactionType === 'Income';
+  const typeLabel = isIncome ? 'Mapato' : 'Matumizi';
+  const typeIcon = isIncome ? 'fa-arrow-down' : 'fa-arrow-up';
+  const typeColor = isIncome ? '#16a085' : '#e74c3c';
+  const extraRow = isIncome
+    ? (transactionData.includeFine ? `
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px dashed #e0e0e0;">
+          <span style="color:#666;"><i class="fas fa-exclamation-triangle"></i> Faini</span>
+          <span style="font-weight:600;">Itajumuishwa kiotomatiki</span>
+        </div>` : '')
+    : `
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px dashed #e0e0e0;">
+          <span style="color:#666;"><i class="fas fa-piggy-bank"></i> Chanzo cha Fedha</span>
+          <span style="font-weight:600;">${transactionData.source}</span>
+        </div>`;
+  
+  Swal.fire({
+    title: 'Thibitisha Muamala',
+    html: `
+      <div style="text-align:left; font-size:14px;">
+        <div style="display:flex; align-items:center; gap:10px; background:${typeColor}15; border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+          <div style="width:38px; height:38px; border-radius:50%; background:${typeColor}; color:white; display:flex; align-items:center; justify-content:center;">
+            <i class="fas ${typeIcon}"></i>
+          </div>
+          <div>
+            <div style="font-weight:700; color:${typeColor};">${typeLabel}</div>
+            <div style="font-size:12px; color:#666;">Kagua taarifa kabla ya kuhifadhi</div>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0;">
+          <span style="color:#666;"><i class="fas fa-user"></i> Mwanachama/Maelezo</span>
+          <span style="font-weight:600;">${memberLabel}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px dashed #e0e0e0;">
+          <span style="color:#666;"><i class="fas fa-tags"></i> Category</span>
+          <span style="font-weight:600;">${transactionData.category}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px dashed #e0e0e0;">
+          <span style="color:#666;"><i class="fas fa-calendar"></i> Tarehe</span>
+          <span style="font-weight:600;">${transactionData.date}</span>
+        </div>
+        ${extraRow}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0 4px; margin-top:8px; border-top:2px solid #eee;">
+          <span style="color:#666; font-weight:600;">Jumla ya Kiasi</span>
+          <span style="font-weight:800; font-size:20px; color:${typeColor};">${formatCurrency(transactionData.amount)}</span>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="fas fa-check"></i> Thibitisha na Hifadhi',
+    cancelButtonText: 'Ghairi',
+    confirmButtonColor: typeColor,
+    cancelButtonColor: '#95a5a6',
+    reverseButtons: true,
+    width: 420
+  }).then((result) => {
+    if (result.isConfirmed) {
+      submitSavingsGroupTransaction(transactionData);
+    }
+  });
+}
+
+function submitSavingsGroupTransaction(transactionData) {
+  Notiflix.Loading.standard('Inarekodi muamala...');
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'recordSavingsTransaction',
+      dbId: currentDbId,
+      transactionData: transactionData
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    Notiflix.Loading.remove();
+    if (data.status === 'success') {
+      Notiflix.Notify.success(data.message || 'Muamala umesajiliwa kikamilifu');
+      hideAddTransactionForm();
+      loadTransactions();
+      if (!document.getElementById('overviewDashboard').classList.contains('hidden')) {
+        loadOverview();
+      }
+    } else {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kusajili muamala');
     }
   })
   .catch(error => {
@@ -5246,6 +6249,32 @@ function updateCategoriesForAccountType() {
     // Also update filter categories
     updateFilterCategoriesForPersonal();
     
+  } else if (currentAccountType === 'savings_group') {
+    // Savings Group (Akiba, Hisa na Mikopo) categories
+    const savingsCategories = [
+      ["Mchango wa Mwanachama", "Mchango wa Mwanachama"],
+      ["Akiba", "Akiba"],
+      ["Hisa", "Hisa"],
+      ["Ada ya Uanachama", "Ada ya Uanachama"],
+      ["Malipo ya Mkopo", "Malipo ya Mkopo"],
+      ["Uendeshaji", "Uendeshaji"],
+      ["Mikutano", "Mikutano"],
+      ["Vifaa vya Ofisi", "Vifaa vya Ofisi"],
+      ["Mengineyo", "Mengineyo"]
+    ];
+    
+    const placeholderOption = document.createElement('option');
+    placeholderOption.value = '';
+    placeholderOption.textContent = '-- Chagua Category --';
+    categorySelect.appendChild(placeholderOption);
+    
+    savingsCategories.forEach(category => {
+      const option = document.createElement('option');
+      option.value = category[0];
+      option.textContent = category[1];
+      categorySelect.appendChild(option);
+    });
+    categorySelect.value = '';
   } else {
     // Organization account categories (existing)
     const organizationCategories = [
@@ -5304,7 +6333,32 @@ function updateCategoriesForAccountType() {
   .then(data => {
     if (data.status === 'success') {
       hideOfflineBadge('transactionsTable');
-      updateTransactionsTable(data.transactions, data.accountType);
+      
+      if (currentAccountType === 'savings_group') {
+        lastLoadedSavingsTransactions = data.transactions || [];
+        const tabs = document.getElementById('savingsTransactionTabs');
+        if (tabs) { tabs.style.display = 'flex'; tabs.classList.remove('hidden'); }
+        
+        // Onesha summary ya tabu iliyo hai kwa sasa (chaguo-msingi: Mapato)
+        const incomeSummary = document.getElementById('miamalaIncomeSummary');
+        const expenseSummary = document.getElementById('miamalaExpenseSummary');
+        if (incomeSummary && expenseSummary) {
+          if (currentSavingsTab === 'Income') {
+            incomeSummary.style.display = 'grid';
+            incomeSummary.classList.remove('hidden');
+          } else {
+            expenseSummary.style.display = 'grid';
+            expenseSummary.classList.remove('hidden');
+          }
+        }
+        updateMiamalaTransactionsSummary();
+        
+        loadSavingsStatusDependenciesAndRender();
+      } else {
+        const tabs = document.getElementById('savingsTransactionTabs');
+        if (tabs) { tabs.style.display = 'none'; tabs.classList.add('hidden'); }
+        updateTransactionsTable(data.transactions, data.accountType);
+      }
 
       // Cache for offline access
       try {
@@ -5358,7 +6412,15 @@ function loadCachedTransactions() {
 }
     
     
+    let transactionsRenderToken = 0;
+    
     function updateTransactionsTable(transactions, accountType) {
+  // Kila wito mpya unapata namba yake ya kipekee - kama majibu ya zamani
+  // (yaliyochelewa kurudi kutoka kwa mtandao) yatarudi baadaye, hayataandikwa
+  // tena juu ya jedwali, hivyo kuzuia miamala kujirudiarudia (duplicate rows).
+  transactionsRenderToken++;
+  const myRenderToken = transactionsRenderToken;
+  
   const tbody = document.getElementById('transactionsTable').querySelector('tbody');
   tbody.innerHTML = '';
   
@@ -5449,6 +6511,7 @@ function loadCachedTransactions() {
     })
     .then(res => res.json())
     .then(membersData => {
+      if (myRenderToken !== transactionsRenderToken) return;
       // Create a map of member ID to member status
       const memberStatusMap = {};
       if (membersData.status === 'success' && membersData.members) {
@@ -5522,6 +6585,7 @@ function loadCachedTransactions() {
       });
     })
     .catch(error => {
+      if (myRenderToken !== transactionsRenderToken) return;
       console.error('Error loading members for status:', error);
       
       // Fallback: show all transactions as Completed
@@ -6118,7 +7182,7 @@ function showQuickNotification(message, type = 'success') {
       
       // Format member name based on account type
       let member = '';
-      if (currentAccountType === 'organization') {
+      if ((currentAccountType === 'organization' || currentAccountType === 'savings_group')) {
         member = transaction['Member Name'] || 'Hakuna maelezo';
       } else {
         member = transaction['Description'] || 'Hakuna maelezo';
@@ -6483,91 +7547,24 @@ function generateTypeReport() {
   );
 }
     
-    // ============ PDF Download: two separate, non-overlapping paths ============
-    //
-    // 1) Android WebView apps (AppCreator24 na wenzake): hutumia URL halisi ya https://
-    //    kuelekea faili la Google Drive (linaloweza kufikiwa na "Anyone with the link").
-    //    Hii ni MUHIMU kwa sababu Android DownloadManager (inayotumiwa na WebView hizi
-    //    kushughulikia downloads) HAIWEZI kabisa kusoma blob:/data: URIs — inahitaji
-    //    http(s) link halisi.
-    //
-    // 2) Website ya kawaida (Chrome/Firefox/Safari/Edge n.k, desktop au simu): hutumia
-    //    blob: kutoka kwenye PDF base64 iliyotumwa na server — hii inapakua faili moja
-    //    kwa moja bila kugusa Google Drive kabisa.
-
-    // Utambuzi wa Android WebView app (kama AppCreator24) - unaziacha nje browsers halisi
-    // (Chrome, Firefox, Samsung Internet, Edge, Opera, UC Browser n.k) hata kwenye Android.
-    // Utambuzi wa uhakika: alama dhahiri (?platform=app) tunayoiweka wenyewe kwenye URL
-    // ya Website inayowekwa kwenye mipangilio ya AppCreator24 (Website URL / App URL).
-    // Hii ndiyo njia pekee ya UHAKIKA 100% - kwa sababu WebView apps nyingi (AppCreator24
-    // ikiwemo) huacha User-Agent ikifanana kabisa na Chrome ya kawaida ya Android kwa
-    // makusudi (ili tovuti zisizizuie), hivyo kutambua kwa UA pekee si salama.
-    //
-    // JINSI YA KUWEKA: Kwenye AppCreator24, nenda kwenye mipangilio ya "Website URL" /
-    // "App URL" na uongeze ?platform=app mwishoni, mfano:
-    //   https://jina-la-tovuti-yako.netlify.app/?platform=app
-    // Baada ya kuweka hivyo na kujenga upya (rebuild) App, download itafanya kazi kwa uhakika.
-    function isLikelyWebViewApp() {
-      // 1) Alama dhahiri kutoka kwenye URL - ndiyo chanzo kikuu cha uamuzi
-      try {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('platform') === 'app') {
-          try { localStorage.setItem('isAppCreatorApp', '1'); } catch (e) {}
-          return true;
-        }
-        // Ruhusu pia kuondoa alama hiyo kwa makusudi (mfano wakati wa kupima kwenye website)
-        if (params.get('platform') === 'web') {
-          try { localStorage.removeItem('isAppCreatorApp'); } catch (e) {}
-          return false;
-        }
-      } catch (e) {}
-
-      // 2) Kumbukumbu ya awali - endapo query param ilipotea kwenye urejeshaji fulani
-      //    ndani ya App (mfano baada ya kufungua na kufunga App)
-      try {
-        if (localStorage.getItem('isAppCreatorApp') === '1') return true;
-      } catch (e) {}
-
-      // 3) Akiba ya mwisho: ishara dhaifu za User-Agent (si za uhakika kamili, lakini
-      //    zinasaidia kama query param haikuwekwa kabisa)
-      const ua = navigator.userAgent || '';
-      if (!/Android/i.test(ua)) return false;
-
-      if (/Firefox|FxiOS|OPR\/|Opera|EdgA\/|SamsungBrowser|UCBrowser|MiuiBrowser|HeyTap|VivoBrowser|CriOS/i.test(ua)) {
-        return false;
-      }
-      if (/;\s*wv\)/i.test(ua)) return true;
-      if (!/Safari/i.test(ua)) return true;
-
-      return false;
-    }
-
-    // Njia ya 1: URL halisi ya Drive - kwa Android WebView apps (AppCreator24 n.k)
-    function downloadViaDirectUrl(downloadUrl, fileName) {
-      if (!downloadUrl) {
-        showQuickNotification('Imeshindwa kupakua ripoti', 'error');
-        return;
-      }
-      try {
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = fileName || '';
-        link.target = '_blank';
-        link.rel = 'noopener';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (e) {
-        console.error('PDF download error (direct URL):', e);
-        window.location.href = downloadUrl;
-      }
-    }
-
-    // Njia ya 2: blob - kwa website ya kawaida (haigusi Google Drive kabisa)
-    function downloadViaBlob(pdfBase64, fileName, mimeType, fallbackDriveUrl) {
+    // ============ PDF Download: Website ya kawaida ============
+    // Hii ni toleo la financial.html lililokusudiwa kwa TOVUTI (browser ya kawaida) PEKEE:
+    // Chrome, Firefox, Safari, Edge n.k, desktop au simu. Linatumia blob: kutoka kwenye
+    // PDF base64 iliyotumwa na server — hii inapakua faili moja kwa moja kwenye kifaa
+    // cha mtumiaji bila kugusa Google Drive kabisa (hakuna account picker/login).
+    function forceDownloadPDF(pdfBase64, fileName, mimeType, fallbackDriveUrl) {
       if (!pdfBase64) {
         // Ikiwa kwa sababu yoyote base64 haipo, tumia URL ya Drive kama njia ya mwisho
-        if (fallbackDriveUrl) downloadViaDirectUrl(fallbackDriveUrl, fileName);
+        if (fallbackDriveUrl) {
+          const link = document.createElement('a');
+          link.href = fallbackDriveUrl;
+          link.download = fileName || '';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          showQuickNotification('Imeshindwa kupakua ripoti', 'error');
+        }
         return;
       }
       try {
@@ -6589,21 +7586,17 @@ function generateTypeReport() {
 
         setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 10000);
       } catch (e) {
-        console.error('PDF download error (blob):', e);
+        console.error('PDF download error:', e);
         if (fallbackDriveUrl) {
-          downloadViaDirectUrl(fallbackDriveUrl, fileName);
+          const link = document.createElement('a');
+          link.href = fallbackDriveUrl;
+          link.download = fileName || '';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
         } else {
           showQuickNotification('Imeshindwa kupakua ripoti', 'error');
         }
-      }
-    }
-
-    // Kiungo kikuu: kinachagua njia sahihi kulingana na mazingira, bila kuingiliana
-    function forceDownloadPDF(pdfBase64, fileName, mimeType, downloadUrl) {
-      if (isLikelyWebViewApp()) {
-        downloadViaDirectUrl(downloadUrl, fileName);
-      } else {
-        downloadViaBlob(pdfBase64, fileName, mimeType, downloadUrl);
       }
     }
     
@@ -6681,7 +7674,7 @@ function fetchLatestMinimumAmount() {
   };
   
   // Only include minimum amount for organization accounts
-  if (currentAccountType === 'organization') {
+  if ((currentAccountType === 'organization' || currentAccountType === 'savings_group')) {
     settings['Minimum Amount for Active Status'] = document.getElementById('settingMinAmount').value;
   }
   
@@ -6716,7 +7709,7 @@ function fetchLatestMinimumAmount() {
       localStorage.setItem('organizationName', currentOrganization);
       
       // Check auto increment status in background - ONLY FOR ORGANIZATIONS
-      if (currentAccountType === 'organization') {
+      if ((currentAccountType === 'organization' || currentAccountType === 'savings_group')) {
         checkAutoIncrementStatus();
       }
     } else {
@@ -6905,7 +7898,7 @@ function saveAutoIncrementSettings() {
 
 function startBackgroundUpdates() {
   // Update auto increment status every 5 seconds - ONLY FOR ORGANIZATIONS
-  if (currentAccountType === 'organization') {
+  if ((currentAccountType === 'organization' || currentAccountType === 'savings_group')) {
     setInterval(() => {
       if (!document.getElementById('settingsDashboard').classList.contains('hidden')) {
         checkAutoIncrementStatus();
@@ -6918,7 +7911,7 @@ function startBackgroundUpdates() {
   
   // Listen for minimum amount field changes
   const minAmountField = document.getElementById('settingMinAmount');
-  if (minAmountField && currentAccountType === 'organization') {
+  if (minAmountField && (currentAccountType === 'organization' || currentAccountType === 'savings_group')) {
     minAmountField.addEventListener('change', function() {
       // Auto-save when user changes minimum amount
       saveMinimumAmountSilently(this.value);
@@ -7616,7 +8609,7 @@ function toggleOrganizationName() {
   const accountType = document.getElementById('accountType').value;
   const orgNameGroup = document.getElementById('orgNameGroup');
   
-  if (accountType === 'organization') {
+  if (accountType === 'organization' || accountType === 'savings_group') {
     orgNameGroup.style.display = 'block';
     orgNameGroup.classList.remove('hidden');
   } else {
@@ -7631,7 +8624,7 @@ function register() {
   const email = document.getElementById('regEmail').value;
   const password = document.getElementById('regPassword').value;
   const accountType = document.getElementById('accountType').value;
-  const orgName = accountType === 'organization' ? document.getElementById('orgName').value : '';
+  const orgName = (accountType === 'organization' || accountType === 'savings_group') ? document.getElementById('orgName').value : '';
   
   if (!email || !password) {
     Notiflix.Notify.failure('Tafadhali jaza barua pepe na nenosiri');
@@ -7648,7 +8641,7 @@ function register() {
     return;
   }
   
-  if (accountType === 'organization' && !orgName) {
+  if ((accountType === 'organization' || accountType === 'savings_group') && !orgName) {
     Notiflix.Notify.failure('Jina la shirika/klkundi linahitajika kwa akaunti ya shirika');
     return;
   }
@@ -7739,6 +8732,51 @@ function loadSettings() {
       document.getElementById('settingOrgName').value = data.settings['Organization Name'] || '';
       document.getElementById('settingCurrency').value = data.settings['Currency'] || 'TZS';
       document.getElementById('settingMinAmount').value = data.settings['Minimum Amount for Active Status'] || '0';
+      
+      // Savings Group (Akiba, Hisa na Mikopo) settings
+      const savingsSection = document.getElementById('savingsGroupSettingsSection');
+      if (savingsSection) {
+        if (currentAccountType === 'savings_group') {
+          savingsSection.style.display = 'block';
+          savingsSection.classList.remove('hidden');
+          
+          document.getElementById('settingTargetAmount').value = data.settings['Target Amount'] || '0';
+          document.getElementById('settingInterestRate').value = data.settings['Interest Rate'] || '0';
+          document.getElementById('settingFineAmount').value = data.settings['Fine Amount'] || '0';
+          document.getElementById('settingMembershipFee').value = data.settings['Membership Fee'] || '0';
+          
+          let allocationGroups = [];
+          try {
+            allocationGroups = JSON.parse(data.settings['Allocation Groups'] || '[]');
+          } catch (e) {
+            allocationGroups = [];
+          }
+          renderAllocationGroups(allocationGroups);
+          
+          try {
+            customIncomeCategories = JSON.parse(data.settings['Custom Income Categories'] || '[]');
+          } catch (e) {
+            customIncomeCategories = [];
+          }
+          try {
+            customExpenseCategories = JSON.parse(data.settings['Custom Expense Categories'] || '[]');
+          } catch (e) {
+            customExpenseCategories = [];
+          }
+          
+          let splitCategories = [];
+          try {
+            splitCategories = JSON.parse(data.settings['Split Categories'] || '[]');
+          } catch (e) {
+            splitCategories = [];
+          }
+          renderSplitCategories(splitCategories);
+        } else {
+          savingsSection.style.display = 'none';
+          savingsSection.classList.add('hidden');
+        }
+      }
+      
       document.getElementById('settingAutoIncrementAmount').value = data.settings['Auto Increment Amount'] || '0';
       
       // Load schedule type
@@ -7781,9 +8819,20 @@ function loadSettings() {
         // Hide Auto Increment and Leaders sections for personal accounts
         document.getElementById('autoIncrementSection').style.display = 'none';
         document.getElementById('leadersSection').style.display = 'none';
+      } else if (currentAccountType === 'savings_group') {
+        // Akaunti za Akiba, Hisa na Mikopo hazitumii "Auto Increment" wala "Viongozi"
+        // (hizi ni maalum kwa akaunti za "Shirika (Mchango na Matumizi)" pekee) - zisionekane
+        document.getElementById('autoIncrementSection').style.display = 'none';
+        document.getElementById('leadersSection').style.display = 'none';
+        // "Badilisha Aina ya Akaunti" ni ya Binafsi<->Shirika pekee (haitambui aina hii mpya
+        // ya tatu) - ificwe kabisa ili isije ikaharibu akaunti kwa bahati mbaya
+        var atcSection = document.getElementById('accountTypeChangeSection');
+        if (atcSection) atcSection.style.display = 'none';
       } else {
         document.getElementById('autoIncrementSection').style.display = 'block';
         document.getElementById('leadersSection').style.display = 'block';
+        var atcSection2 = document.getElementById('accountTypeChangeSection');
+        if (atcSection2) atcSection2.style.display = 'block';
         
         // Load organization leaders
         loadOrganizationLeaders();
@@ -7802,7 +8851,1337 @@ function loadSettings() {
   });
 }
 
-// Helper function to get status for a transaction
+// ============ Savings Group (Akiba, Hisa na Mikopo) Settings ============
+
+const ALLOCATION_FUND_OPTIONS = ["Akiba", "Hisa", "Faini", "Ada ya Uanachama", "Riba ya Mkopo"];
+let allocationGroupsState = [];
+
+const SAVINGS_INCOME_CATEGORIES = ["Mchango wa Mwanachama", "Ada ya Uanachama", "Mengineyo"];
+let customIncomeCategories = [];
+
+function addCustomCategory() {
+  const input = document.getElementById('newCategoryNameInput');
+  const categoryName = input.value.trim();
+  
+  if (!categoryName) {
+    Notiflix.Notify.failure('Tafadhali weka jina la Category');
+    return;
+  }
+  
+  Notiflix.Loading.standard('Inaongeza Category...');
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'addCustomIncomeCategory',
+      dbId: currentDbId,
+      categoryName: categoryName
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    Notiflix.Loading.remove();
+    if (data.status === 'success') {
+      customIncomeCategories = data.customCategories || customIncomeCategories.concat([categoryName]);
+      input.value = '';
+      renderSplitCategories(splitCategoriesState);
+      showQuickNotification(data.message || 'Category imeongezwa kikamilifu');
+    } else {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kuongeza Category');
+    }
+  })
+  .catch(error => {
+    Notiflix.Loading.remove();
+    console.error('Error adding custom category:', error);
+    Notiflix.Notify.failure('Imeshindwa kuongeza Category');
+  });
+}
+
+let customExpenseCategories = [];
+
+function addCustomExpenseCategoryUI() {
+  const input = document.getElementById('newExpenseCategoryNameInput');
+  const categoryName = input.value.trim();
+  
+  if (!categoryName) {
+    Notiflix.Notify.failure('Tafadhali weka jina la Category');
+    return;
+  }
+  
+  Notiflix.Loading.standard('Inaongeza Category...');
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'addCustomExpenseCategory',
+      dbId: currentDbId,
+      categoryName: categoryName
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    Notiflix.Loading.remove();
+    if (data.status === 'success') {
+      customExpenseCategories = data.customCategories || customExpenseCategories.concat([categoryName]);
+      input.value = '';
+      showQuickNotification(data.message || 'Category imeongezwa kikamilifu');
+    } else {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kuongeza Category');
+    }
+  })
+  .catch(error => {
+    Notiflix.Loading.remove();
+    console.error('Error adding custom expense category:', error);
+    Notiflix.Notify.failure('Imeshindwa kuongeza Category');
+  });
+}
+let splitCategoriesState = [];
+
+function renderSplitCategories(selected) {
+  splitCategoriesState = selected ? selected.slice() : [];
+  const container = document.getElementById('splitCategoriesList');
+  if (!container) return;
+  
+  const allCategories = SAVINGS_INCOME_CATEGORIES.concat(customIncomeCategories);
+  
+  container.innerHTML = allCategories.map(function(cat) {
+    const checked = splitCategoriesState.indexOf(cat) !== -1 ? 'checked' : '';
+    const safeId = 'splitCat_' + cat.replace(/[^a-zA-Z0-9]/g, '_');
+    return `
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="${safeId}" value="${cat}" ${checked} onchange="toggleSplitCategory('${cat.replace(/'/g, "\\'")}', this.checked)">
+        <span>${cat}</span>
+      </label>
+    `;
+  }).join('');
+}
+
+function toggleSplitCategory(cat, checked) {
+  if (checked) {
+    if (splitCategoriesState.indexOf(cat) === -1) splitCategoriesState.push(cat);
+  } else {
+    splitCategoriesState = splitCategoriesState.filter(function(c) { return c !== cat; });
+  }
+}
+
+function renderAllocationGroups(groups) {
+  allocationGroupsState = (groups && groups.length > 0) ? groups.slice() : [{fund: "Hisa", percent: 75}, {fund: "Akiba", percent: 25}];
+  renderAllocationGroupsList();
+}
+
+function renderAllocationGroupsList() {
+  const container = document.getElementById('allocationGroupsList');
+  if (!container) return;
+  
+  const allFundOptions = ALLOCATION_FUND_OPTIONS.concat(customIncomeCategories);
+  
+  container.innerHTML = allocationGroupsState.map(function(group, index) {
+    const options = allFundOptions.map(function(fund) {
+      return `<option value="${fund}" ${group.fund === fund ? 'selected' : ''}>${fund}</option>`;
+    }).join('');
+    
+    return `
+      <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+        <select onchange="updateAllocationGroupField(${index}, 'fund', this.value)" style="flex: 2;">
+          ${options}
+        </select>
+        <input type="number" min="0" max="100" step="0.01" value="${group.percent}"
+               onchange="updateAllocationGroupField(${index}, 'percent', this.value)"
+               style="flex: 1;" placeholder="%">
+        <button class="btn btn-sm btn-danger" onclick="removeAllocationGroupRow(${index})" type="button">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    `;
+  }).join('');
+  
+  updateAllocationGroupsTotal();
+}
+
+function addAllocationGroupRow() {
+  allocationGroupsState.push({fund: "Akiba", percent: 0});
+  renderAllocationGroupsList();
+}
+
+function removeAllocationGroupRow(index) {
+  allocationGroupsState.splice(index, 1);
+  renderAllocationGroupsList();
+}
+
+function updateAllocationGroupField(index, field, value) {
+  if (!allocationGroupsState[index]) return;
+  allocationGroupsState[index][field] = field === 'percent' ? (parseFloat(value) || 0) : value;
+  updateAllocationGroupsTotal();
+}
+
+function updateAllocationGroupsTotal() {
+  const total = allocationGroupsState.reduce(function(sum, g) { return sum + (parseFloat(g.percent) || 0); }, 0);
+  const totalEl = document.getElementById('allocationGroupsTotalPercent');
+  const warningEl = document.getElementById('allocationGroupsTotalWarning');
+  if (totalEl) totalEl.textContent = total.toFixed(2).replace(/\.00$/, '');
+  if (warningEl) warningEl.style.display = total > 100 ? 'inline' : 'none';
+}
+
+function saveAllocationGroups() {
+  const total = allocationGroupsState.reduce(function(sum, g) { return sum + (parseFloat(g.percent) || 0); }, 0);
+  if (total > 100) {
+    Notiflix.Notify.failure('Jumla ya asilimia haiwezi kuzidi 100%');
+    return;
+  }
+  if (allocationGroupsState.length === 0) {
+    Notiflix.Notify.failure('Ongeza angalau kundi moja');
+    return;
+  }
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'updateSystemSettings',
+      dbId: currentDbId,
+      settings: {
+        'Allocation Groups': JSON.stringify(allocationGroupsState),
+        'Split Categories': JSON.stringify(splitCategoriesState)
+      }
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      showQuickNotification('Makundi ya mgawo yamehifadhiwa');
+    } else {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kuhifadhi');
+    }
+  })
+  .catch(error => {
+    console.error('Error saving allocation groups:', error);
+    Notiflix.Notify.failure('Imeshindwa kuhifadhi makundi ya mgawo');
+  });
+}
+
+function saveSavingsGroupSettings() {
+  const targetAmount = document.getElementById('settingTargetAmount').value || '0';
+  const interestRate = document.getElementById('settingInterestRate').value || '0';
+  const fineAmount = document.getElementById('settingFineAmount').value || '0';
+  const membershipFee = document.getElementById('settingMembershipFee').value || '0';
+  
+  const loadingEl = document.getElementById('saveSavingsGroupSettingsLoading');
+  if (loadingEl) loadingEl.style.display = 'block';
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'updateSystemSettings',
+      dbId: currentDbId,
+      settings: {
+        'Target Amount': targetAmount,
+        'Interest Rate': interestRate,
+        'Fine Amount': fineAmount,
+        'Membership Fee': membershipFee
+      }
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (data.status === 'success') {
+      showQuickNotification('Mipangilio imehifadhiwa');
+    } else {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kuhifadhi');
+    }
+  })
+  .catch(error => {
+    if (loadingEl) loadingEl.style.display = 'none';
+    console.error('Error saving savings group settings:', error);
+    Notiflix.Notify.failure('Imeshindwa kuhifadhi mipangilio');
+  });
+}
+
+// ============ Mikopo (Loans) Dashboard ============
+
+let cachedInterestRate = 0;
+
+let cachedFundBalances = {};
+
+function loadLoansDashboard() {
+  // Pata asilimia ya riba kwa ajili ya preview
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getSystemSettings', dbId: currentDbId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      cachedInterestRate = parseFloat(data.settings['Interest Rate']) || 0;
+      updateLoanPreview();
+    }
+  })
+  .catch(error => console.error('Error loading interest rate:', error));
+  
+  // Jaza dropdown ya wanachama
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'listMembers', dbId: currentDbId, filter: {} })
+  })
+  .then(res => res.json())
+  .then(data => {
+    const select = document.getElementById('loanMemberSelect');
+    if (select && data.status === 'success') {
+      select.innerHTML = '<option value="">-- Chagua Mwanachama --</option>' +
+        (data.members || []).map(m => `<option value="${m['Member ID']}">${m['Full Name']}</option>`).join('');
+    }
+  })
+  .catch(error => console.error('Error loading members for loans:', error));
+  
+  // Takwimu za Mikopo + salio la kila mfuko (kutoka getFundsSummary)
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getFundsSummary', dbId: currentDbId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      document.getElementById('loansActiveTotal').textContent = formatCurrency(data.summary.totalLoanedOut);
+      document.getElementById('loansExpectedInterest').textContent = formatCurrency(data.summary.expectedInterestOnActiveLoans);
+      
+      cachedFundBalances = {};
+      const loanSourceSelect = document.getElementById('loanSourceFund');
+      const currentSourceSelection = loanSourceSelect ? loanSourceSelect.value : '';
+      if (loanSourceSelect) {
+        loanSourceSelect.innerHTML = '<option value="">-- Chagua Mfuko --</option>' +
+          (data.funds || []).map(f => `<option value="${f['Fund Name']}">${f['Fund Name']}</option>`).join('');
+        if (currentSourceSelection) loanSourceSelect.value = currentSourceSelection;
+      }
+      (data.funds || []).forEach(fund => {
+        // Tumia "Pool Balance" (salio HALISI la mfuko) kwa ajili ya kukopesha - siyo
+        // "Total Amount" ambayo kwa Ada ya Uanachama ni jumla ya kuonesha Gundua pekee
+        cachedFundBalances[fund['Fund Name']] = parseFloat(fund['Pool Balance'] !== undefined ? fund['Pool Balance'] : fund['Total Amount']) || 0;
+      });
+      updateLoanSourceFundBalance();
+    }
+  })
+  .catch(error => console.error('Error loading loan stats:', error));
+  
+  // Orodha ya mikopo
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'listLoans', dbId: currentDbId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      renderLoansTable(data.loans || []);
+      const activeCount = (data.loans || []).filter(l => l.Status === 'Active').length;
+      document.getElementById('loansActiveCount').textContent = activeCount;
+    }
+  })
+  .catch(error => console.error('Error loading loans:', error));
+}
+
+function updateLoanSourceFundBalance() {
+  const fund = document.getElementById('loanSourceFund').value;
+  const label = document.getElementById('loanSourceFundBalance');
+  if (!label) return;
+  
+  if (!fund) {
+    label.textContent = '';
+    return;
+  }
+  
+  const balance = cachedFundBalances[fund] !== undefined ? cachedFundBalances[fund] : 0;
+  label.innerHTML = `<i class="fas fa-info-circle"></i> Salio linalopatikana kwenye ${fund}: <strong>${formatCurrency(balance)}</strong>`;
+}
+
+let cachedExpenseFundBalances = {};
+
+function updateExpenseSourceFundBalance() {
+  const fund = document.getElementById('transactionSourceFund').value;
+  const label = document.getElementById('transactionSourceFundBalance');
+  if (!label) return;
+  
+  if (!fund) {
+    label.innerHTML = '<i class="fas fa-info-circle"></i> Matumizi haya yatatolewa moja kwa moja kwenye mfuko huu';
+    return;
+  }
+  
+  const balance = cachedExpenseFundBalances[fund] !== undefined ? cachedExpenseFundBalances[fund] : 0;
+  label.innerHTML = `<i class="fas fa-info-circle"></i> Kiasi kinachopatikana kwenye ${fund}: <strong style="color: #16a085;">${formatCurrency(balance)}</strong>`;
+}
+
+function updateLoanPreview() {
+  const principal = parseFloat(document.getElementById('loanPrincipalAmount').value) || 0;
+  const interest = principal * (cachedInterestRate / 100);
+  const total = principal + interest;
+  
+  document.getElementById('loanPreviewRate').textContent = cachedInterestRate + '%';
+  document.getElementById('loanPreviewInterest').textContent = formatCurrency(interest);
+  document.getElementById('loanPreviewTotal').textContent = formatCurrency(total);
+}
+
+function submitDisburseLoan() {
+  const memberId = document.getElementById('loanMemberSelect').value;
+  const sourceFund = document.getElementById('loanSourceFund').value;
+  const principalAmount = document.getElementById('loanPrincipalAmount').value;
+  const dueDate = document.getElementById('loanDueDate').value;
+  const notes = document.getElementById('loanNotes').value;
+  
+  if (!memberId) {
+    Notiflix.Notify.failure('Tafadhali chagua mwanachama');
+    return;
+  }
+  if (!sourceFund) {
+    Notiflix.Notify.failure('Tafadhali chagua mfuko unaotoa mkopo huu');
+    return;
+  }
+  if (!principalAmount || parseFloat(principalAmount) <= 0) {
+    Notiflix.Notify.failure('Tafadhali weka kiasi sahihi cha mkopo');
+    return;
+  }
+  
+  const availableBalance = cachedFundBalances[sourceFund] !== undefined ? cachedFundBalances[sourceFund] : 0;
+  if (parseFloat(principalAmount) > availableBalance) {
+    Notiflix.Notify.failure(`Salio la ${sourceFund} halitoshi. Linalopatikana: ${formatCurrency(availableBalance)}`);
+    return;
+  }
+  
+  const memberSelect = document.getElementById('loanMemberSelect');
+  const memberLabel = memberSelect.selectedIndex >= 0 ? memberSelect.options[memberSelect.selectedIndex].textContent : '';
+  const interest = parseFloat(principalAmount) * (cachedInterestRate / 100);
+  const total = parseFloat(principalAmount) + interest;
+  
+  Swal.fire({
+    title: 'Thibitisha Kutoa Mkopo',
+    html: `
+      <div style="text-align:left; font-size:14px;">
+        <div style="display:flex; align-items:center; gap:10px; background:#3498db15; border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+          <div style="width:38px; height:38px; border-radius:50%; background:#3498db; color:white; display:flex; align-items:center; justify-content:center;">
+            <i class="fas fa-hand-holding-usd"></i>
+          </div>
+          <div>
+            <div style="font-weight:700; color:#3498db;">Mkopo Mpya</div>
+            <div style="font-size:12px; color:#666;">Kagua taarifa kabla ya kutoa</div>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0;">
+          <span style="color:#666;"><i class="fas fa-user"></i> Mwanachama</span>
+          <span style="font-weight:600;">${memberLabel}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px dashed #e0e0e0;">
+          <span style="color:#666;"><i class="fas fa-piggy-bank"></i> Mfuko</span>
+          <span style="font-weight:600;">${sourceFund}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px dashed #e0e0e0;">
+          <span style="color:#666;"><i class="fas fa-percentage"></i> Riba (${cachedInterestRate}%)</span>
+          <span style="font-weight:600;">${formatCurrency(interest)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0 4px; margin-top:8px; border-top:2px solid #eee;">
+          <span style="color:#666; font-weight:600;">Jumla ya Kulipa</span>
+          <span style="font-weight:800; font-size:20px; color:#3498db;">${formatCurrency(total)}</span>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="fas fa-check"></i> Thibitisha na Toa Mkopo',
+    cancelButtonText: 'Ghairi',
+    confirmButtonColor: '#3498db',
+    cancelButtonColor: '#95a5a6',
+    reverseButtons: true,
+    width: 420
+  }).then((result) => {
+    if (result.isConfirmed) {
+      finalizeDisburseLoan(memberId, sourceFund, principalAmount, dueDate, notes);
+    }
+  });
+}
+
+function finalizeDisburseLoan(memberId, sourceFund, principalAmount, dueDate, notes) {
+  Notiflix.Loading.standard('Inatoa mkopo...');
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'disburseLoan',
+      dbId: currentDbId,
+      memberId: memberId,
+      sourceFund: sourceFund,
+      principalAmount: principalAmount,
+      dueDate: dueDate,
+      notes: notes
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    Notiflix.Loading.remove();
+    if (data.status === 'success') {
+      showQuickNotification('Mkopo umetolewa kikamilifu');
+      document.getElementById('loanPrincipalAmount').value = '';
+      document.getElementById('loanDueDate').value = '';
+      document.getElementById('loanNotes').value = '';
+      document.getElementById('loanMemberSelect').value = '';
+      document.getElementById('loanSourceFund').value = '';
+      updateLoanPreview();
+      updateLoanSourceFundBalance();
+      loadLoansDashboard();
+    } else {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kutoa mkopo');
+    }
+  })
+  .catch(error => {
+    Notiflix.Loading.remove();
+    console.error('Error disbursing loan:', error);
+    Notiflix.Notify.failure('Imeshindwa kutoa mkopo');
+  });
+}
+
+function renderLoansTable(loans) {
+  const tbody = document.querySelector('#loansTable tbody');
+  if (!tbody) return;
+  
+  if (!loans || loans.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align: center; padding: 20px; color: #666;">
+          <i class="fas fa-info-circle"></i> Hakuna mikopo bado
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  tbody.innerHTML = loans.map(loan => {
+    const isActive = loan.Status === 'Active';
+    const statusBadge = isActive
+      ? '<span class="status-badge status-active">Inaendelea</span>'
+      : '<span class="status-badge status-inactive">Imekamilika</span>';
+    
+    return `
+      <tr>
+        <td>${loan['Member Name'] || ''}</td>
+        <td>${loan['Source Fund'] || 'Akiba'}</td>
+        <td>${formatCurrency(loan['Principal Amount'])}</td>
+        <td>${formatCurrency(loan['Interest Amount'])}</td>
+        <td>${formatCurrency(loan['Total To Pay'])}</td>
+        <td>${formatCurrency(loan['Amount Paid'])}</td>
+        <td>${formatCurrency(loan['Balance'])}</td>
+        <td>${statusBadge}</td>
+        <td>
+          ${isActive ? `<button class="btn btn-sm btn-primary" onclick="openLoanRepaymentModal('${loan['Loan ID']}', '${(loan['Member Name'] || '').replace(/'/g, "\\'")}', ${loan['Balance']})">
+            <i class="fas fa-money-check-alt"></i> Lipa
+          </button>` : '-'}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openLoanRepaymentModal(loanId, memberName, balance) {
+  Swal.fire({
+    title: 'Rekodi Malipo ya Mkopo',
+    html: `
+      <p style="text-align:left; margin-bottom: 10px;">Mwanachama: <strong>${memberName}</strong></p>
+      <p style="text-align:left; margin-bottom: 15px;">Salio linalobaki: <strong>${formatCurrency(balance)}</strong></p>
+      <input type="number" id="repaymentAmount" class="swal2-input" placeholder="Kiasi cha malipo" min="0" step="0.01">
+      <input type="text" id="repaymentNotes" class="swal2-input" placeholder="Maelezo (hiari)">
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Endelea',
+    cancelButtonText: 'Ghairi',
+    preConfirm: () => {
+      const amount = document.getElementById('repaymentAmount').value;
+      const notes = document.getElementById('repaymentNotes').value;
+      if (!amount || parseFloat(amount) <= 0) {
+        Swal.showValidationMessage('Tafadhali weka kiasi sahihi');
+        return false;
+      }
+      return { amount: amount, notes: notes };
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      confirmAndFinalizeLoanRepayment(loanId, memberName, balance, result.value.amount, result.value.notes);
+    }
+  });
+}
+
+// Ujumbe wa kuthibitisha wa kisasa kabla ya kusajili malipo ya mkopo
+function confirmAndFinalizeLoanRepayment(loanId, memberName, balance, amount, notes) {
+  const newBalance = Math.max(0, balance - parseFloat(amount));
+  const willComplete = newBalance <= 0;
+  
+  Swal.fire({
+    title: 'Thibitisha Malipo',
+    html: `
+      <div style="text-align:left; font-size:14px;">
+        <div style="display:flex; align-items:center; gap:10px; background:#16a08515; border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+          <div style="width:38px; height:38px; border-radius:50%; background:#16a085; color:white; display:flex; align-items:center; justify-content:center;">
+            <i class="fas fa-money-check-alt"></i>
+          </div>
+          <div>
+            <div style="font-weight:700; color:#16a085;">Malipo ya Mkopo</div>
+            <div style="font-size:12px; color:#666;">Kagua taarifa kabla ya kuhifadhi</div>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0;">
+          <span style="color:#666;"><i class="fas fa-user"></i> Mwanachama</span>
+          <span style="font-weight:600;">${memberName}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px dashed #e0e0e0;">
+          <span style="color:#666;"><i class="fas fa-wallet"></i> Salio la Sasa</span>
+          <span style="font-weight:600;">${formatCurrency(balance)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px dashed #e0e0e0;">
+          <span style="color:#666;"><i class="fas fa-check-double"></i> Salio Litakalobaki</span>
+          <span style="font-weight:600; color:${willComplete ? '#16a085' : '#e67e22'};">${formatCurrency(newBalance)} ${willComplete ? '(Itakamilika)' : ''}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0 4px; margin-top:8px; border-top:2px solid #eee;">
+          <span style="color:#666; font-weight:600;">Kiasi cha Malipo</span>
+          <span style="font-weight:800; font-size:20px; color:#16a085;">${formatCurrency(amount)}</span>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="fas fa-check"></i> Thibitisha na Lipa',
+    cancelButtonText: 'Ghairi',
+    confirmButtonColor: '#16a085',
+    cancelButtonColor: '#95a5a6',
+    reverseButtons: true,
+    width: 420
+  }).then((confirmResult) => {
+    if (confirmResult.isConfirmed) {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'recordLoanRepayment',
+          dbId: currentDbId,
+          loanId: loanId,
+          amount: amount,
+          notes: notes
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          showQuickNotification('Malipo yamesajiliwa kikamilifu');
+          loadLoansDashboard();
+        } else {
+          Notiflix.Notify.failure(data.message || 'Imeshindwa kusajili malipo');
+        }
+      })
+      .catch(error => {
+        console.error('Error recording repayment:', error);
+        Notiflix.Notify.failure('Imeshindwa kusajili malipo');
+      });
+    }
+  });
+}
+
+// ============ Mwanzo (Overview) + Gundua (Discover) kwa Akaunti za Akiba, Hisa na Mikopo ============
+
+const FUND_ICON_MAP = {
+  "Akiba": "fa-piggy-bank",
+  "Hisa": "fa-chart-pie",
+  "Faini": "fa-exclamation-triangle",
+  "Ada ya Uanachama": "fa-id-card",
+  "Riba ya Mkopo": "fa-percentage"
+};
+
+function loadSavingsOverview() {
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getFundsSummary', dbId: currentDbId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status !== 'success') return;
+    
+    const s = data.summary;
+    document.getElementById('savTotalMembers').textContent = s.totalMembers || 0;
+    document.getElementById('savTotalSavings').textContent = formatCurrency(s.totalSavings);
+    document.getElementById('savTotalShares').textContent = formatCurrency(s.totalShares);
+    document.getElementById('savTotalLoanedOut').textContent = formatCurrency(s.totalLoanedOut);
+    document.getElementById('savInterestCollected').textContent = formatCurrency(s.interestCollected);
+    document.getElementById('savExpectedInterest').textContent = formatCurrency(s.expectedInterestOnActiveLoans);
+    document.getElementById('savFinesCollected').textContent = formatCurrency(s.finesCollected);
+    document.getElementById('savTotalExcludingLoans').textContent = formatCurrency(s.totalCollectedExcludingLoans);
+    document.getElementById('savTotalWithLoans').textContent = formatCurrency(s.totalWithActiveLoans);
+    
+    // Gundua (Discover) - kadi za mifuko
+    const grid = document.getElementById('discoverFundsGrid');
+    if (grid) {
+      grid.innerHTML = (data.funds || []).map(fund => {
+        const icon = FUND_ICON_MAP[fund['Fund Name']] || fund['Icon'] || 'fa-wallet';
+        const collected = fund['Collected Amount'] !== undefined ? fund['Collected Amount'] : fund['Total Amount'];
+        const halisi = fund['Pool Balance'] !== undefined ? fund['Pool Balance'] : fund['Total Amount'];
+        return `
+          <div class="account-card" onclick="openFundDetail('${fund['Fund Name'].replace(/'/g, "\\'")}')">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 46px; height: 46px; border-radius: 12px; background: linear-gradient(135deg, #3498db, #2980b9); display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; flex-shrink: 0;">
+                <i class="fas ${icon}"></i>
+              </div>
+              <div>
+                <h4 style="margin: 0 0 4px 0;">${fund['Fund Name']}</h4>
+                <p style="margin: 0; color: #666; font-size: 13px;">${fund['Description'] || ''}</p>
+              </div>
+            </div>
+            <div style="margin-top: 12px;">
+              <div style="font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.3px;">Kilichokusanywa</div>
+              <div style="font-size: 17px; font-weight: 700; color: var(--secondary);">${formatCurrency(collected)}</div>
+            </div>
+            <div style="margin-top: 8px;">
+              <div style="font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.3px;">Halisi</div>
+              <div style="font-size: 17px; font-weight: 800; color: #16a085;">${formatCurrency(halisi)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  })
+  .catch(error => console.error('Error loading savings overview:', error));
+  
+  loadDiscoverExpenses();
+}
+
+let allDiscoverIncome = [];
+let allDiscoverExpenses = [];
+let discoverInfoShowCount = 10;
+let currentDiscoverInfoTab = 'Income';
+
+function loadDiscoverExpenses() {
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'listTransactions',
+      dbId: currentDbId,
+      filter: {},
+      accountType: currentAccountType
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    const tbody = document.querySelector('#discoverExpensesTable tbody');
+    if (!tbody) return;
+    
+    if (data.status !== 'success') {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#666; padding:15px;">Imeshindwa kupakia taarifa</td></tr>`;
+      return;
+    }
+    
+    // Panga kwa tarehe/muda, mpya juu (Newest - Oldest). Miamala ya sheet iko kwa
+    // mpangilio wa kuingizwa (chronological ascending), hivyo kuigeuza kwanza kabla ya
+    // "stable sort" inahakikisha kwamba miamala ya tarehe/muda sawa (mfano zote hazina
+    // saa iliyorekodiwa) bado zinaonekana kwa mpangilio sahihi - zilizoingizwa mwisho juu.
+    const allTransactions = (data.transactions || []).slice().reverse();
+    
+    allDiscoverIncome = allTransactions
+      .filter(t => t['Transaction Type'] === 'Income')
+      .sort((a, b) => new Date(b.Date) - new Date(a.Date));
+    
+    allDiscoverExpenses = allTransactions
+      .filter(t => t['Transaction Type'] === 'Expense')
+      .sort((a, b) => new Date(b.Date) - new Date(a.Date));
+    
+    // Summary za Mapato: Jumla ya Mapato, Matumizi, Halisi
+    const totalIncome = allDiscoverIncome.reduce((sum, t) => sum + (parseFloat(t.Amount) || 0), 0);
+    const totalExpenseForIncomeTab = allDiscoverExpenses.reduce((sum, t) => sum + (parseFloat(t.Amount) || 0), 0);
+    document.getElementById('discoverIncomeTotalIncome').textContent = formatCurrency(totalIncome);
+    document.getElementById('discoverIncomeTotalExpense').textContent = formatCurrency(totalExpenseForIncomeTab);
+    document.getElementById('discoverIncomeNet').textContent = formatCurrency(totalIncome - totalExpenseForIncomeTab);
+    
+    // Summary za Matumizi: Jumla ya Matumizi
+    document.getElementById('discoverExpenseTotal').textContent = formatCurrency(totalExpenseForIncomeTab);
+    
+    discoverInfoShowCount = 10;
+    renderDiscoverExpenses();
+  })
+  .catch(error => console.error('Error loading discover info:', error));
+}
+
+function switchDiscoverInfoTab(type) {
+  currentDiscoverInfoTab = type;
+  discoverInfoShowCount = 10;
+  
+  const incomeBtn = document.getElementById('discoverTabIncomeBtn');
+  const expenseBtn = document.getElementById('discoverTabExpenseBtn');
+  const incomeSummary = document.getElementById('discoverIncomeSummary');
+  const expenseSummary = document.getElementById('discoverExpenseSummary');
+  
+  if (type === 'Income') {
+    incomeBtn.className = 'btn btn-success';
+    expenseBtn.className = 'btn btn-secondary';
+    incomeSummary.style.display = 'grid';
+    incomeSummary.classList.remove('hidden');
+    expenseSummary.style.display = 'none';
+    expenseSummary.classList.add('hidden');
+  } else {
+    incomeBtn.className = 'btn btn-secondary';
+    expenseBtn.className = 'btn btn-danger';
+    incomeSummary.style.display = 'none';
+    incomeSummary.classList.add('hidden');
+    expenseSummary.style.display = 'grid';
+    expenseSummary.classList.remove('hidden');
+  }
+  
+  renderDiscoverExpenses();
+}
+
+function renderDiscoverExpenses() {
+  const tbody = document.querySelector('#discoverExpensesTable tbody');
+  if (!tbody) return;
+  
+  const sourceList = currentDiscoverInfoTab === 'Income' ? allDiscoverIncome : allDiscoverExpenses;
+  const emptyLabel = currentDiscoverInfoTab === 'Income' ? 'Hakuna mapato bado' : 'Hakuna matumizi bado';
+  const amountClass = currentDiscoverInfoTab === 'Income' ? 'amount-income' : 'amount-expense';
+  const amountPrefix = currentDiscoverInfoTab === 'Income' ? '+' : '-';
+  
+  if (sourceList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#666; padding:15px;">${emptyLabel}</td></tr>`;
+    const btnContainer = document.getElementById('discoverExpensesMoreBtnContainer');
+    if (btnContainer) btnContainer.innerHTML = '';
+    return;
+  }
+  
+  const visibleItems = sourceList.slice(0, discoverInfoShowCount);
+  
+  tbody.innerHTML = visibleItems.map(t => `
+    <tr>
+      <td>${t.Date ? new Date(t.Date).toLocaleDateString('sw-TZ') : ''}</td>
+      <td>${t['Member Name'] || t.Description || '-'}</td>
+      <td>${t.Category || '-'}</td>
+      <td>${t.Fund || '-'}</td>
+      <td class="${amountClass}">${amountPrefix} ${formatCurrency(t.Amount)}</td>
+    </tr>
+  `).join('');
+  
+  const btnContainer = document.getElementById('discoverExpensesMoreBtnContainer');
+  if (btnContainer) {
+    if (discoverInfoShowCount < sourceList.length) {
+      btnContainer.innerHTML = `
+        <button class="btn btn-secondary" onclick="showMoreDiscoverExpenses()" style="width: 100%; margin-top: 12px;">
+          <i class="fas fa-chevron-down"></i> Tazama Zaidi
+        </button>
+      `;
+    } else {
+      btnContainer.innerHTML = '';
+    }
+  }
+}
+
+function showMoreDiscoverExpenses() {
+  discoverInfoShowCount += 10;
+  renderDiscoverExpenses();
+}
+
+function openFundDetail(fundName) {
+  Notiflix.Loading.standard('Inapakia...');
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getFundDetails', dbId: currentDbId, fundName: fundName })
+  })
+  .then(res => res.json())
+  .then(data => {
+    Notiflix.Loading.remove();
+    if (data.status !== 'success') {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kupakia taarifa za mfuko');
+      return;
+    }
+    
+    const fund = data.fund;
+    const transactions = data.transactions || [];
+    const viewType = data.viewType || 'standard';
+    
+    let headerHtml = '';
+    let rows = '';
+    let colspan = 3;
+    
+    if (viewType === 'fine') {
+      colspan = 3;
+      headerHtml = `
+        <th style="text-align:left; padding: 6px;">Mwanachama</th>
+        <th style="text-align:left; padding: 6px;">Kiasi cha Faini</th>
+        <th style="text-align:left; padding: 6px;">Tarehe</th>
+      `;
+      rows = transactions.length > 0 ? transactions.map(t => `
+        <tr>
+          <td>${t['Member Name'] || '-'}</td>
+          <td>${formatCurrency(t['Amount'])}</td>
+          <td>${t['Date'] ? new Date(t['Date']).toLocaleDateString('sw-TZ') : ''}</td>
+        </tr>
+      `).join('') : `<tr><td colspan="${colspan}" style="text-align:center; color:#666; padding:15px;">Hakuna mwanachama aliyelipa faini bado</td></tr>`;
+      
+    } else if (viewType === 'loan_interest') {
+      colspan = 4;
+      headerHtml = `
+        <th style="text-align:left; padding: 6px;">Mwanachama</th>
+        <th style="text-align:left; padding: 6px;">Kiasi Kilichokopeshwa</th>
+        <th style="text-align:left; padding: 6px;">Riba</th>
+        <th style="text-align:left; padding: 6px;">Tarehe</th>
+      `;
+      rows = transactions.length > 0 ? transactions.map(t => `
+        <tr>
+          <td>${t['Member Name'] || '-'}</td>
+          <td>${formatCurrency(t['Loaned Amount'])}</td>
+          <td>${formatCurrency(t['Interest Amount'])}</td>
+          <td>${t['Date'] ? new Date(t['Date']).toLocaleDateString('sw-TZ') : ''}</td>
+        </tr>
+      `).join('') : `<tr><td colspan="${colspan}" style="text-align:center; color:#666; padding:15px;">Hakuna riba iliyokusanywa bado</td></tr>`;
+      
+    } else {
+      // "category" (Ada ya Uanachama) na "standard" (Akiba/Hisa) - Mwanachama + Kiasi + Tarehe
+      colspan = 3;
+      headerHtml = `
+        <th style="text-align:left; padding: 6px;">Mwanachama</th>
+        <th style="text-align:left; padding: 6px;">Kiasi</th>
+        <th style="text-align:left; padding: 6px;">Tarehe</th>
+      `;
+      rows = transactions.length > 0 ? transactions.map(t => `
+        <tr>
+          <td>${t['Member Name'] || '-'}</td>
+          <td>${formatCurrency(t['Amount'])}</td>
+          <td>${t['Date'] ? new Date(t['Date']).toLocaleDateString('sw-TZ') : ''}</td>
+        </tr>
+      `).join('') : `<tr><td colspan="${colspan}" style="text-align:center; color:#666; padding:15px;">Hakuna miamala bado</td></tr>`;
+    }
+    
+    // Hifadhi taarifa hizi kwa muda kwa ajili ya "Zilizotumika"/"Zilizokopeshwa" (clickable)
+    currentFundNameForDetails = fund['Fund Name'];
+    currentFundExpenseDetails = data.expenseDetails || [];
+    currentFundLoanDetails = data.loanDetails || [];
+    
+    Swal.fire({
+      title: fund['Fund Name'],
+      html: `
+        <p style="text-align:left;">${fund['Description'] || ''}</p>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 12px 0 16px; text-align: left;">
+          <div style="background:#f8fafc; border-radius:10px; padding:10px 12px;">
+            <div style="font-size:11px; color:#888; text-transform:uppercase;">Jumla ya Fedha Yote</div>
+            <div style="font-size:16px; font-weight:700; color:#3498db;">${formatCurrency(data.summary ? data.summary.totalCollected : fund['Total Amount'])}</div>
+          </div>
+          <div style="background:#fdecea; border-radius:10px; padding:10px 12px; cursor:pointer;" onclick="showFundExpenseDetails()" title="Bofya kuona taarifa kamili za Matumizi">
+            <div style="font-size:11px; color:#888; text-transform:uppercase;">Zilizotumika <i class="fas fa-chevron-right" style="font-size:9px;"></i></div>
+            <div style="font-size:16px; font-weight:700; color:#e74c3c;">${formatCurrency(data.summary ? data.summary.totalSpent : 0)}</div>
+          </div>
+          <div style="background:#fef2e6; border-radius:10px; padding:10px 12px; cursor:pointer;" onclick="showFundLoanDetails()" title="Bofya kuona taarifa kamili za Mikopo">
+            <div style="font-size:11px; color:#888; text-transform:uppercase;">Zilizokopeshwa <i class="fas fa-chevron-right" style="font-size:9px;"></i></div>
+            <div style="font-size:16px; font-weight:700; color:#e67e22;">${formatCurrency(data.summary ? data.summary.totalLoaned : 0)}</div>
+          </div>
+          <div style="background:#e8f8f3; border-radius:10px; padding:10px 12px;">
+            <div style="font-size:11px; color:#888; text-transform:uppercase;">Halisi</div>
+            <div style="font-size:16px; font-weight:800; color:#16a085;">${formatCurrency(data.summary ? data.summary.netBalance : fund['Total Amount'])}</div>
+          </div>
+        </div>
+        <div style="max-height: 300px; overflow-y: auto; text-align: left;">
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 1px solid #eee;">
+                ${headerHtml}
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `,
+      width: 600,
+      confirmButtonText: 'Funga'
+    });
+  })
+  .catch(error => {
+    Notiflix.Loading.remove();
+    console.error('Error loading fund details:', error);
+    Notiflix.Notify.failure('Imeshindwa kupakia taarifa za mfuko');
+  });
+}
+
+// Taarifa za muda kwa ajili ya "Zilizotumika"/"Zilizokopeshwa" (clickable) kwenye Gundua
+let currentFundNameForDetails = '';
+let currentFundExpenseDetails = [];
+let currentFundLoanDetails = [];
+
+// Taarifa kamili za Matumizi ya mfuko husika (inayofunguliwa kwa kubofya "Zilizotumika")
+function showFundExpenseDetails() {
+  const rows = currentFundExpenseDetails.length > 0 ? currentFundExpenseDetails.map(e => `
+    <tr>
+      <td>${e['Member Name'] || '-'}</td>
+      <td>${e['Category'] || '-'}</td>
+      <td class="amount-expense">- ${formatCurrency(e['Amount'])}</td>
+      <td>${e['Date'] ? new Date(e['Date']).toLocaleDateString('sw-TZ') : ''}</td>
+      <td>${e['Status'] || 'Completed'}</td>
+    </tr>
+  `).join('') : `<tr><td colspan="5" style="text-align:center; color:#666; padding:15px;">Hakuna matumizi yaliyotolewa kutoka mfuko huu bado</td></tr>`;
+  
+  Swal.fire({
+    title: `Matumizi ya ${currentFundNameForDetails}`,
+    html: `
+      <div style="max-height: 350px; overflow-y: auto; text-align: left;">
+        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 1px solid #eee;">
+              <th style="text-align:left; padding: 6px;">Mwanachama/Maelezo</th>
+              <th style="text-align:left; padding: 6px;">Category</th>
+              <th style="text-align:left; padding: 6px;">Kiasi</th>
+              <th style="text-align:left; padding: 6px;">Tarehe</th>
+              <th style="text-align:left; padding: 6px;">Hali</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `,
+    width: 650,
+    confirmButtonText: 'Rudi Nyuma'
+  }).then(() => {
+    openFundDetail(currentFundNameForDetails);
+  });
+}
+
+// Taarifa kamili za Mikopo iliyotolewa kutoka mfuko husika (inayofunguliwa kwa kubofya "Zilizokopeshwa")
+function showFundLoanDetails() {
+  const rows = currentFundLoanDetails.length > 0 ? currentFundLoanDetails.map(l => {
+    const statusBadge = l['Status'] === 'Active'
+      ? '<span class="status-badge status-active">Inaendelea</span>'
+      : '<span class="status-badge status-inactive">Imekamilika</span>';
+    return `
+      <tr>
+        <td>${l['Member Name'] || '-'}</td>
+        <td>${formatCurrency(l['Principal Amount'])}</td>
+        <td>${formatCurrency(l['Interest Amount'])}</td>
+        <td>${formatCurrency(l['Balance'])}</td>
+        <td>${statusBadge}</td>
+        <td>${l['Disbursed Date'] ? new Date(l['Disbursed Date']).toLocaleDateString('sw-TZ') : ''}</td>
+      </tr>
+    `;
+  }).join('') : `<tr><td colspan="6" style="text-align:center; color:#666; padding:15px;">Hakuna mikopo iliyotolewa kutoka mfuko huu bado</td></tr>`;
+  
+  Swal.fire({
+    title: `Mikopo ya ${currentFundNameForDetails}`,
+    html: `
+      <div style="max-height: 350px; overflow-y: auto; text-align: left;">
+        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 1px solid #eee;">
+              <th style="text-align:left; padding: 6px;">Mwanachama</th>
+              <th style="text-align:left; padding: 6px;">Mtaji</th>
+              <th style="text-align:left; padding: 6px;">Riba</th>
+              <th style="text-align:left; padding: 6px;">Salio</th>
+              <th style="text-align:left; padding: 6px;">Hali</th>
+              <th style="text-align:left; padding: 6px;">Tarehe</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `,
+    width: 650,
+    confirmButtonText: 'Rudi Nyuma'
+  }).then(() => {
+    openFundDetail(currentFundNameForDetails);
+  });
+}
+
+// ============ Miamala kwa Makundi ya Tarehe (Mapato/Matumizi tabs) - Akiba, Hisa na Mikopo ============
+
+let lastLoadedSavingsTransactions = [];
+let currentSavingsTab = 'Income';
+
+function switchSavingsTransactionTab(type) {
+  currentSavingsTab = type;
+  const mapatoBtn = document.getElementById('tabMapatoBtn');
+  const matumiziBtn = document.getElementById('tabMatumiziBtn');
+  if (mapatoBtn && matumiziBtn) {
+    if (type === 'Income') {
+      mapatoBtn.className = 'btn btn-success';
+      matumiziBtn.className = 'btn btn-secondary';
+    } else {
+      mapatoBtn.className = 'btn btn-secondary';
+      matumiziBtn.className = 'btn btn-danger';
+    }
+  }
+  
+  const incomeSummary = document.getElementById('miamalaIncomeSummary');
+  const expenseSummary = document.getElementById('miamalaExpenseSummary');
+  if (incomeSummary && expenseSummary) {
+    if (type === 'Income') {
+      incomeSummary.style.display = 'grid';
+      incomeSummary.classList.remove('hidden');
+      expenseSummary.style.display = 'none';
+      expenseSummary.classList.add('hidden');
+    } else {
+      incomeSummary.style.display = 'none';
+      incomeSummary.classList.add('hidden');
+      expenseSummary.style.display = 'grid';
+      expenseSummary.classList.remove('hidden');
+    }
+  }
+  
+  renderSavingsTransactionsGrouped();
+}
+
+function updateMiamalaTransactionsSummary() {
+  const totalIncome = (lastLoadedSavingsTransactions || [])
+    .filter(t => t['Transaction Type'] === 'Income')
+    .reduce((sum, t) => sum + (parseFloat(t.Amount) || 0), 0);
+  const totalExpense = (lastLoadedSavingsTransactions || [])
+    .filter(t => t['Transaction Type'] === 'Expense')
+    .reduce((sum, t) => sum + (parseFloat(t.Amount) || 0), 0);
+  
+  const incomeIncomeEl = document.getElementById('miamalaIncomeTotalIncome');
+  const incomeExpenseEl = document.getElementById('miamalaIncomeTotalExpense');
+  const incomeNetEl = document.getElementById('miamalaIncomeNet');
+  const expenseTotalEl = document.getElementById('miamalaExpenseTotal');
+  
+  if (incomeIncomeEl) incomeIncomeEl.textContent = formatCurrency(totalIncome);
+  if (incomeExpenseEl) incomeExpenseEl.textContent = formatCurrency(totalExpense);
+  if (incomeNetEl) incomeNetEl.textContent = formatCurrency(totalIncome - totalExpense);
+  if (expenseTotalEl) expenseTotalEl.textContent = formatCurrency(totalExpense);
+}
+
+// Vigezo vinavyohitajika kuhesabu Hali sahihi (kulingana na Category) - vinapakiwa
+// kabla ya kuonesha jedwali la Miamala kwa akaunti za Akiba, Hisa na Mikopo
+let cachedTargetAmount = 0;
+let cachedFineAmountSetting = 0;
+let cachedLoansForStatus = [];
+let cachedSplitCategoriesForStatus = [];
+
+function loadSavingsStatusDependenciesAndRender() {
+  Promise.all([
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getSystemSettings', dbId: currentDbId })
+    }).then(res => res.json()),
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'listLoans', dbId: currentDbId })
+    }).then(res => res.json())
+  ])
+  .then(([settingsData, loansData]) => {
+    if (settingsData.status === 'success') {
+      cachedTargetAmount = parseFloat(settingsData.settings['Target Amount']) || 0;
+      cachedFineAmountSetting = parseFloat(settingsData.settings['Fine Amount']) || 0;
+      cachedMembershipFee = parseFloat(settingsData.settings['Membership Fee']) || 0;
+      try {
+        cachedSplitCategoriesForStatus = JSON.parse(settingsData.settings['Split Categories'] || '[]');
+      } catch (e) {
+        cachedSplitCategoriesForStatus = [];
+      }
+    }
+    if (loansData.status === 'success') {
+      cachedLoansForStatus = loansData.loans || [];
+    }
+    renderSavingsTransactionsGrouped();
+  })
+  .catch(error => {
+    console.error('Error loading status dependencies:', error);
+    renderSavingsTransactionsGrouped();
+  });
+}
+
+// Hesabu Hali ("Imekamilika"/"Haijakamilika") kwa muamala wa Mapato, kulingana na Category
+function computeSavingsIncomeStatus(t) {
+  const category = t.Category || '';
+  const amount = parseFloat(t.Amount) || 0;
+  
+  if (category === 'Mchango wa Mwanachama') {
+    return amount >= cachedTargetAmount && cachedTargetAmount > 0 ? 'Imekamilika' : (cachedTargetAmount > 0 ? 'Haijakamilika' : (t.Status || 'Imekamilika'));
+  }
+  if (category === 'Ada ya Uanachama') {
+    return amount >= cachedMembershipFee && cachedMembershipFee > 0 ? 'Imekamilika' : (cachedMembershipFee > 0 ? 'Haijakamilika' : (t.Status || 'Imekamilika'));
+  }
+  if (category === 'Hisa' || category === 'Akiba') {
+    return amount >= cachedTargetAmount && cachedTargetAmount > 0 ? 'Imekamilika' : (cachedTargetAmount > 0 ? 'Haijakamilika' : (t.Status || 'Imekamilika'));
+  }
+  if (category === 'Faini') {
+    return amount >= cachedFineAmountSetting && cachedFineAmountSetting > 0 ? 'Imekamilika' : (cachedFineAmountSetting > 0 ? 'Haijakamilika' : (t.Status || 'Imekamilika'));
+  }
+  if (category === 'Malipo ya Mkopo') {
+    const desc = t.Description || '';
+    const match = desc.match(/\(([A-Za-z0-9]+)\)/);
+    if (match) {
+      const loanId = match[1];
+      const loan = cachedLoansForStatus.find(l => l['Loan ID'] === loanId);
+      if (loan) {
+        return loan.Status === 'Completed' ? 'Imekamilika' : 'Haijakamilika';
+      }
+    }
+    return t.Status || 'Imekamilika';
+  }
+  
+  // Categories nyingine (Mengineyo, za ziada alizoongeza mtumiaji): Ikiwa Category hii
+  // imesetiwa kugawanyika (ipo kwenye "Split Categories"), tumia Kiasi Lengwa kama kigezo.
+  // Ikiwa haina Setting yoyote ya mgawo (haijasetiwa kugawanyika), ni "Imekamilika" moja kwa moja.
+  if (category && cachedSplitCategoriesForStatus.indexOf(category) !== -1) {
+    return amount >= cachedTargetAmount && cachedTargetAmount > 0 ? 'Imekamilika' : (cachedTargetAmount > 0 ? 'Haijakamilika' : 'Imekamilika');
+  }
+  return 'Imekamilika';
+}
+
+function renderSavingsTransactionsGrouped() {
+  const table = document.getElementById('transactionsTable');
+  if (!table) return;
+  const thead = table.querySelector('thead');
+  const tbody = table.querySelector('tbody');
+  
+  thead.innerHTML = `
+    <tr>
+      <th>ID</th>
+      <th>Mwanachama/Maelezo</th>
+      <th>Kategoria</th>
+      <th>Kiasi</th>
+      <th>Hali</th>
+      <th>Vitendo</th>
+    </tr>
+  `;
+  
+  const filtered = (lastLoadedSavingsTransactions || []).filter(function(t) {
+    return t['Transaction Type'] === currentSavingsTab;
+  });
+  
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 20px; color: #666;">
+          <i class="fas fa-receipt"></i> Hakuna miamala
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  // Kusanya kwa tarehe (bila muda), tarehe mpya juu (Newest - Oldest)
+  const groups = {};
+  filtered.forEach(function(t) {
+    const d = new Date(t.Date);
+    const key = isNaN(d.getTime()) ? 'unknown' : d.toISOString().split('T')[0];
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+  
+  const sortedKeys = Object.keys(groups).sort().reverse();
+  const tabLabel = currentSavingsTab === 'Income' ? 'MAPATO' : 'MATUMIZI';
+  
+  let html = '';
+  sortedKeys.forEach(function(key) {
+    const group = groups[key];
+    
+    // Ndani ya tarehe moja, majina yanajipanga A-Z
+    group.sort(function(a, b) {
+      const nameA = (a['Member Name'] || a.Description || '').toString().toLowerCase();
+      const nameB = (b['Member Name'] || b.Description || '').toString().toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+    
+    let dateLabel = 'Tarehe Isiyojulikana';
+    if (key !== 'unknown') {
+      const parts = key.split('-');
+      dateLabel = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    
+    html += `
+      <tr>
+        <td colspan="6" style="font-weight: 700; padding: 10px 12px; background: #eef2f6; color: #2c3e50; font-size: 13px; letter-spacing: 0.3px;">
+          ${tabLabel} YA TAREHE ${dateLabel}
+        </td>
+      </tr>
+    `;
+    
+    group.forEach(function(t) {
+      const fullId = t['Transaction ID'] || '';
+      const shortId = fullId.length > 8 ? '...' + fullId.slice(-6) : fullId;
+      const amountClass = t['Transaction Type'] === 'Income' ? 'amount-income' : 'amount-expense';
+      const amountPrefix = t['Transaction Type'] === 'Income' ? '+' : '-';
+      const displayName = t['Member Name'] || (t.Description ? 'Maelezo: ' + t.Description : 'Hakuna maelezo');
+      
+      // Hali ya Mapato inahesabiwa kulingana na Category (tazama computeSavingsIncomeStatus);
+      // Matumizi yanaendelea kutumia Hali ya awali kama ilivyorekodiwa
+      const status = t['Transaction Type'] === 'Income' ? computeSavingsIncomeStatus(t) : (t.Status || 'Completed');
+      const statusClass = status === 'Imekamilika' ? 'status-active'
+        : status === 'Haijakamilika' ? 'status-pending'
+        : 'status-' + status.toLowerCase();
+      
+      const historyBtn = t['Member ID'] ? `
+        <button class="btn btn-sm btn-primary" onclick="openMemberHistory('${t['Member ID']}', '${(t['Member Name'] || '').replace(/'/g, "\\'")}')" title="Historia ya Mwanachama" style="background:#8e44ad; border-color:#8e44ad;">
+          <i class="fas fa-history"></i>
+        </button>
+      ` : '';
+      
+      html += `
+        <tr>
+          <td><small title="${fullId}">${shortId}</small></td>
+          <td>${displayName}</td>
+          <td>${t.Category || ''}</td>
+          <td class="${amountClass}">${amountPrefix} ${formatCurrency(t.Amount)}</td>
+          <td><span class="status-badge ${statusClass}">${status}</span></td>
+          <td>
+            <div class="table-actions">
+              ${historyBtn}
+              <button class="btn btn-sm btn-primary" onclick="editTransaction('${fullId}')" title="Hariri">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="deleteTransaction('${fullId}')" title="Futa">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+  });
+  
+  tbody.innerHTML = html;
+}
+
+// Historia ya Mwanachama - kila kitendo kilichofanyika kwa mwanachama huyu
+function openMemberHistory(memberId, memberName) {
+  if (!memberId) return;
+  
+  Notiflix.Loading.standard('Inapakia historia...');
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getMemberHistory', dbId: currentDbId, memberId: memberId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    Notiflix.Loading.remove();
+    if (data.status !== 'success') {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kupakia historia');
+      return;
+    }
+    
+    const entries = data.history || [];
+    const ACTION_ICONS = {
+      'Muamala Mpya': 'fa-plus-circle',
+      'Muamala Umehaririwa': 'fa-edit',
+      'Muamala Umefutwa': 'fa-trash-alt',
+      'Taarifa Zimehaririwa': 'fa-user-edit',
+      'Mwanachama Amefutwa': 'fa-user-times'
+    };
+    
+    const rows = entries.length > 0 ? entries.map(function(e) {
+      const icon = ACTION_ICONS[e.Action] || 'fa-info-circle';
+      const dateStr = e.Date ? new Date(e.Date).toLocaleString('sw-TZ') : '';
+      return `
+        <div style="display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eee; text-align: left;">
+          <div style="flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; background: #8e44ad; color: white; display: flex; align-items: center; justify-content: center;">
+            <i class="fas ${icon}" style="font-size: 13px;"></i>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 13.5px;">${e.Action || ''}</div>
+            <div style="font-size: 12.5px; color: #555; margin-top: 2px;">${e.Details || ''}</div>
+            <div style="font-size: 11px; color: #999; margin-top: 3px;">${dateStr}</div>
+          </div>
+        </div>
+      `;
+    }).join('') : `<p style="text-align:center; color:#666; padding:15px;">Hakuna historia bado kwa mwanachama huyu</p>`;
+    
+    Swal.fire({
+      title: `Historia ya ${memberName || 'Mwanachama'}`,
+      html: `<div style="max-height: 400px; overflow-y: auto;">${rows}</div>`,
+      width: 550,
+      confirmButtonText: 'Funga'
+    });
+  })
+  .catch(error => {
+    Notiflix.Loading.remove();
+    console.error('Error loading member history:', error);
+    Notiflix.Notify.failure('Imeshindwa kupakia historia');
+  });
+}
 function getTransactionStatus(transaction, membersList) {
   if (!transaction) {
     return {
