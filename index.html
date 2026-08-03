@@ -3321,7 +3321,7 @@ tr:hover {
 
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNTnb9MhrNdEATFw4SG_fCK0WVhWwnvAJvYbsPlIn48TYapAOMTiZPkiDTNcDQoJU8/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzD1PZjLQh_Dzl0mfgiASwJENFI58LE6H2CGhL3veH2UENXFK4WdXEJmtUCEEdYHIl1/exec";
     let currentDbId = null;
     let currentOrganization = '';
     let currentUserEmail = '';
@@ -3372,11 +3372,14 @@ document.addEventListener('DOMContentLoaded', function() {
       currentAccountType = savedAccountType;
     }
     
+    // Hakikisha vipengele sahihi vya aina hii ya akaunti pekee vinaonekana KABLA
+    // dashibodi haijaonekana kabisa - hii inazuia "flash" ya vipengele vya aina
+    // nyingine ya akaunti (mfano Shirika la kawaida) kuonekana kwa muda mfupi
+    // kabla ya taarifa kupakiwa kutoka server.
+    adjustStatsGridForAccountType();
+    
     // Show main dashboard
     showMainDashboard();
-    
-    // Hakikisha menyu (Wanachama, Mikopo, n.k.) zinaonekana sahihi mara moja
-    adjustStatsGridForAccountType();
     
     // Initialize transaction form
     initializeTransactionForm();
@@ -3406,7 +3409,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeTransactionForm() {
   const transactionDateField = document.getElementById('transactionDate');
   if (transactionDateField && !transactionDateField.value) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatLocalDateKey(new Date());
     transactionDateField.value = today;
   }
   
@@ -3567,6 +3570,54 @@ function adjustStatsGridForAccountType() {
     }
   }
   
+  // ============ Vipengele vya Mwanzo (Overview) - vionekane sahihi MARA MOJA, ============
+  // ============ kabla ya taarifa kupakiwa kutoka server (kuzuia "flash" ya vipengele  ============
+  // ============ vya aina isiyo sahihi ya akaunti) ============
+  const savingsSection = document.getElementById('savingsOverviewSection');
+  const overviewChartSection = document.getElementById('overviewChartSection');
+  const overviewRecentTxSection = document.getElementById('overviewRecentTransactionsSection');
+  const pendingTxSection = document.getElementById('pendingTransactionsSection');
+  const memberAccountsContainer = document.getElementById('memberAccountsContainer');
+  
+  if (currentAccountType === 'savings_group') {
+    if (savingsSection) { savingsSection.style.display = 'block'; savingsSection.classList.remove('hidden'); }
+    if (statsGrid) statsGrid.style.display = 'none';
+    if (overviewChartSection) overviewChartSection.style.display = 'none';
+    if (overviewRecentTxSection) overviewRecentTxSection.style.display = 'none';
+    if (pendingTxSection) pendingTxSection.style.display = 'none';
+    if (memberAccountsContainer) memberAccountsContainer.style.display = 'none';
+  } else {
+    if (savingsSection) { savingsSection.style.display = 'none'; savingsSection.classList.add('hidden'); }
+    if (statsGrid) statsGrid.style.display = 'grid';
+    if (overviewChartSection) overviewChartSection.style.display = 'block';
+    if (overviewRecentTxSection) overviewRecentTxSection.style.display = 'block';
+    if (memberAccountsContainer) memberAccountsContainer.style.display = 'block';
+    if (pendingTxSection) pendingTxSection.style.display = currentAccountType === 'personal' ? 'none' : 'block';
+  }
+  
+  // ============ Vipengele vya Mipangilio (Settings) - vionekane sahihi MARA MOJA ============
+  const savingsSettingsSection = document.getElementById('savingsGroupSettingsSection');
+  const autoIncrementSection = document.getElementById('autoIncrementSection');
+  const leadersSection = document.getElementById('leadersSection');
+  const accountTypeChangeSection = document.getElementById('accountTypeChangeSection');
+  
+  if (currentAccountType === 'savings_group') {
+    if (savingsSettingsSection) { savingsSettingsSection.style.display = 'block'; savingsSettingsSection.classList.remove('hidden'); }
+    if (autoIncrementSection) autoIncrementSection.style.display = 'none';
+    if (leadersSection) leadersSection.style.display = 'none';
+    if (accountTypeChangeSection) accountTypeChangeSection.style.display = 'none';
+  } else {
+    if (savingsSettingsSection) { savingsSettingsSection.style.display = 'none'; savingsSettingsSection.classList.add('hidden'); }
+    if (currentAccountType === 'personal') {
+      if (autoIncrementSection) autoIncrementSection.style.display = 'none';
+      if (leadersSection) leadersSection.style.display = 'none';
+    } else {
+      if (autoIncrementSection) autoIncrementSection.style.display = 'block';
+      if (leadersSection) leadersSection.style.display = 'block';
+    }
+    if (accountTypeChangeSection) accountTypeChangeSection.style.display = 'block';
+  }
+  
   if (!statsGrid || !membersCard) return;
   
   if (currentAccountType === 'personal') {
@@ -3679,10 +3730,10 @@ function login() {
       
       Notiflix.Notify.success(data.message);
       
-      // Adjust grid immediately after login
-      setTimeout(() => {
-        adjustStatsGridForAccountType();
-      }, 100);
+      // Hakikisha vipengele sahihi vya aina hii ya akaunti pekee vinaonekana KABLA
+      // dashibodi haijaonekana kabisa (bila "delay") - hii inazuia "flash" ya
+      // vipengele vya aina nyingine ya akaunti kuonekana kwa muda mfupi baada ya login
+      adjustStatsGridForAccountType();
       
       showMainDashboard();
     } else {
@@ -5614,7 +5665,7 @@ function updateMembersTable(members) {
   }
   
   // Set today's date
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatLocalDateKey(new Date());
   document.getElementById('transactionDate').value = today;
   
   // Add event listener for member selection (only for organizations)
@@ -6015,12 +6066,19 @@ function registerSavingsGroupTransaction() {
     return;
   }
   
+  // Changanya tarehe iliyochaguliwa na MUDA HALISI wa sasa wa kifaa cha mtumiaji (saa,
+  // dakika, sekunde) - hii inazuia miamala ya siku moja "kuchanganyikana" kwenye
+  // mpangilio/makundi ya tarehe, na kuhakikisha muamala mpya unaonekana juu kila wakati.
+  const now = new Date();
+  const [pickedYear, pickedMonth, pickedDay] = date.split('-').map(Number);
+  const combinedDateTime = new Date(pickedYear, pickedMonth - 1, pickedDay, now.getHours(), now.getMinutes(), now.getSeconds());
+  
   const transactionData = {
     transactionType: transactionType,
     amount: amount,
     memberId: memberId,
     description: description,
-    date: date,
+    date: combinedDateTime.toISOString(),
     category: category
   };
   
@@ -6099,7 +6157,7 @@ function confirmAndSubmitSavingsTransaction(transactionData, memberLabel) {
         </div>
         <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px dashed #e0e0e0;">
           <span style="color:#666;"><i class="fas fa-calendar"></i> Tarehe</span>
-          <span style="font-weight:600;">${transactionData.date}</span>
+          <span style="font-weight:600;">${new Date(transactionData.date).toLocaleDateString('sw-TZ')}</span>
         </div>
         ${extraRow}
         <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0 4px; margin-top:8px; border-top:2px solid #eee;">
@@ -6735,14 +6793,14 @@ function showQuickNotification(message, type = 'success') {
     try {
       const dateObj = new Date(transaction.Date);
       if (!isNaN(dateObj.getTime())) {
-        transactionDate = dateObj.toISOString().split('T')[0];
+        transactionDate = formatLocalDateKey(dateObj);
       } else {
         // Try to parse different date formats
         const parts = transaction.Date.split(/[/-]/);
         if (parts.length === 3) {
           const parsedDate = new Date(parts[0], parts[1]-1, parts[2]);
           if (!isNaN(parsedDate.getTime())) {
-            transactionDate = parsedDate.toISOString().split('T')[0];
+            transactionDate = formatLocalDateKey(parsedDate);
           }
         }
       }
@@ -6753,7 +6811,7 @@ function showQuickNotification(message, type = 'success') {
   
   // If no valid date found, use today
   if (!transactionDate) {
-    transactionDate = new Date().toISOString().split('T')[0];
+    transactionDate = formatLocalDateKey(new Date());
   }
   
   // Determine categories based on account type
@@ -7472,7 +7530,7 @@ function showQuickNotification(message, type = 'success') {
         reportBtn.innerHTML = originalText;
         
         if (data.status === 'success') {
-          forceDownloadPDF(data.pdfBase64, data.fileName, data.mimeType, data.downloadUrl);
+          forceDownloadPDF(data.downloadUrl, data.fileName);
           
           // Silent success notification
           showQuickNotification('Ripoti imetengenezwa kikamilifu');
@@ -7530,7 +7588,7 @@ function generateTypeReport() {
         typeReportBtn.innerHTML = originalText;
         
         if (data.status === 'success') {
-          forceDownloadPDF(data.pdfBase64, data.fileName, data.mimeType, data.downloadUrl);
+          forceDownloadPDF(data.downloadUrl, data.fileName);
           showQuickNotification(`Ripoti ya ${reportTypeName} imetengenezwa`);
         } else {
           showQuickNotification(data.message, 'error');
@@ -7547,57 +7605,25 @@ function generateTypeReport() {
   );
 }
     
-    // ============ PDF Download: Website ya kawaida ============
-    // Hii ni toleo la financial.html lililokusudiwa kwa TOVUTI (browser ya kawaida) PEKEE:
-    // Chrome, Firefox, Safari, Edge n.k, desktop au simu. Linatumia blob: kutoka kwenye
-    // PDF base64 iliyotumwa na server — hii inapakua faili moja kwa moja kwenye kifaa
-    // cha mtumiaji bila kugusa Google Drive kabisa (hakuna account picker/login).
-    function forceDownloadPDF(pdfBase64, fileName, mimeType, fallbackDriveUrl) {
-      if (!pdfBase64) {
-        // Ikiwa kwa sababu yoyote base64 haipo, tumia URL ya Drive kama njia ya mwisho
-        if (fallbackDriveUrl) {
-          const link = document.createElement('a');
-          link.href = fallbackDriveUrl;
-          link.download = fileName || '';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        } else {
-          showQuickNotification('Imeshindwa kupakua ripoti', 'error');
-        }
+    // ============ PDF Download: App ya AppCreator24 (Android WebView) ============
+    // Hii ni toleo la financial.html lililokusudiwa kwa App ya AppCreator24 PEKEE.
+    // Linatumia URL halisi ya https:// kuelekea faili la Google Drive (linaloweza
+    // kufikiwa na "Anyone with the link") — SI blob:, SI data: URI, SI window mpya.
+    //
+    // MUHIMU: hatutumii target="_blank" wala window.open() kwa sababu WebView nyingi za
+    // app-builders kama AppCreator24 HAZIWEZI kufungua dirisha/tab jipya (hazina
+    // "multi-window support"). Link/click ya namna hiyo hushindwa kimya kimya - hakuna
+    // navigation halisi inayotokea, hivyo download listener ya asili ya Android
+    // (inayotumia DownloadManager) haiwahi kuguswa kabisa. Kwa kubadilisha "location" ya
+    // dirisha lililopo moja kwa moja, WebView inashika mwitikio wa faili (Content-Disposition:
+    // attachment) na kuukabidhi kwa DownloadManager, huku ukurasa wa App ukibaki palepale
+    // (kwa majibu ya "attachment", WebView haiachi ukurasa wa sasa - inaanzisha download tu).
+    function forceDownloadPDF(downloadUrl, fileName) {
+      if (!downloadUrl) {
+        showQuickNotification('Imeshindwa kupakua ripoti', 'error');
         return;
       }
-      try {
-        const byteCharacters = atob(pdfBase64);
-        const byteArray = new Uint8Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteArray[i] = byteCharacters.charCodeAt(i);
-        }
-
-        const blob = new Blob([byteArray], { type: mimeType || 'application/pdf' });
-        const blobUrl = URL.createObjectURL(blob);
-
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 10000);
-      } catch (e) {
-        console.error('PDF download error:', e);
-        if (fallbackDriveUrl) {
-          const link = document.createElement('a');
-          link.href = fallbackDriveUrl;
-          link.download = fileName || '';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        } else {
-          showQuickNotification('Imeshindwa kupakua ripoti', 'error');
-        }
-      }
+      window.location.href = downloadUrl;
     }
     
    // Save minimum amount silently without showing loading
@@ -10011,6 +10037,16 @@ function computeSavingsIncomeStatus(t) {
   return 'Imekamilika';
 }
 
+// Tarehe ya "YYYY-MM-DD" kutoka kwenye Date object, ikitumia MUDA HALISI wa kifaa
+// (local time) - SIYO UTC (toISOString hutumia UTC, ambayo huweza kubadilisha
+// tarehe endapo saa za sasa za eneo husika ziko mbali na UTC, mfano EAT +3)
+function formatLocalDateKey(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function renderSavingsTransactionsGrouped() {
   const table = document.getElementById('transactionsTable');
   if (!table) return;
@@ -10043,11 +10079,15 @@ function renderSavingsTransactionsGrouped() {
     return;
   }
   
-  // Kusanya kwa tarehe (bila muda), tarehe mpya juu (Newest - Oldest)
+  // Kusanya kwa tarehe (bila muda), tarehe mpya juu (Newest - Oldest).
+  // MUHIMU: tunatumia tarehe HALISI ya kifaa cha mtumiaji (local date), SIYO
+  // toISOString() (ambayo hutumia UTC) - hii inazuia muamala wa "leo" kuonekana
+  // chini ya tarehe ya "jana" endapo saa za sasa (mfano jioni EAT) zinapovuka
+  // mpaka wa siku katika UTC.
   const groups = {};
   filtered.forEach(function(t) {
     const d = new Date(t.Date);
-    const key = isNaN(d.getTime()) ? 'unknown' : d.toISOString().split('T')[0];
+    const key = isNaN(d.getTime()) ? 'unknown' : formatLocalDateKey(d);
     if (!groups[key]) groups[key] = [];
     groups[key].push(t);
   });
@@ -10536,7 +10576,7 @@ function showAddTransactionForMember() {
   const selectedMember = allMembersDataForLeaders.transactionsByMember[currentSelectedMemberId];
   
   // Get today's date
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatLocalDateKey(new Date());
   
   Swal.fire({
     title: `Ongeza Muamala kwa ${selectedMember.memberName}`,
@@ -11773,7 +11813,7 @@ function resubmitTransaction(pendingId) {
 // Function to show resubmit form
 function showResubmitForm(transaction) {
   // Get today's date
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatLocalDateKey(new Date());
   
   Swal.fire({
     title: `Ongeza Muamala Upya`,
