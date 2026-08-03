@@ -10,7 +10,7 @@
 // muundo mkubwa wa faili (mfano kuongeza/kuondoa faili kwenye APP_SHELL), badilisha namba ya
 // CACHE_NAME hapa chini (mfano kutoka v1 kwenda v2) ili kulazimisha kusafisha cache za zamani.
 
-const CACHE_NAME = 'mfumo-wa-fedha-v1.2';
+const CACHE_NAME = 'mfumo-wa-fedha-v1.3';
 const APP_SHELL = [
   '/',
   '/index.html',
