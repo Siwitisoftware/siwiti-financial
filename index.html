@@ -152,12 +152,55 @@ body {
   border-right: 1px solid #dee2e6;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
+  transition: width 0.25s ease;
+  overflow: hidden;
+}
+
+/* Sidebar ikiwa imefungwa - kwa DESKTOP pekee (kama ilivyoombwa). Kwenye simu, sidebar
+   tayari ina muundo wake tofauti (safu-wima, upana kamili), hivyo haihitaji "collapse" hii */
+@media (min-width: 993px) {
+  .sidebar.collapsed {
+    width: 64px;
+  }
+  
+  /* Icons za menyu zibaki zikionekana - majina tu yanatoweka (mwonekano wa
+     kitaalamu zaidi), bila kuathiri utendaji kazi wa kubofya menyu */
+  .sidebar.collapsed .sidebar-menu li a {
+    font-size: 0;
+    justify-content: center;
+    padding: 14px 0;
+  }
+  
+  .sidebar.collapsed .sidebar-menu li a i {
+    font-size: 18px;
+  }
+  
+  .sidebar.collapsed .sidebar-footer {
+    display: none;
+  }
+  
+  .sidebar.collapsed .sidebar-header {
+    padding: 0;
+    text-align: center;
+    border-bottom: none;
+  }
+  
+  .sidebar.collapsed .sidebar-header h3 {
+    font-size: 0;
+  }
+  
+  .sidebar.collapsed .sidebar-header h3 i {
+    font-size: 20px;
+  }
 }
 
 .sidebar-header {
   padding: 0 20px 20px;
   border-bottom: 1px solid #dee2e6;
   margin-bottom: 20px;
+  cursor: pointer;
+  user-select: none;
 }
 
 .sidebar-header h3 {
@@ -1769,8 +1812,8 @@ tr:hover {
     
     <div class="content-container">
       <!-- Sidebar -->
-      <div class="sidebar">
-        <div class="sidebar-header">
+      <div class="sidebar" id="appSidebar">
+        <div class="sidebar-header" onclick="toggleSidebarCollapse()" title="Funga/Fungua Menyu">
           <h3><i class="fas fa-bars"></i> Menyu</h3>
         </div>
         
@@ -2785,11 +2828,41 @@ tr:hover {
               <h3><i class="fas fa-chart-bar"></i> Ripoti za FEDHA</h3>
               <p>Unda na angalia ripoti zako za FEDHA</p>
             </div>
-            <div class="action-buttons">
-              <button class="btn btn-success" onclick="generateFinancialReport()">
-                <i class="fas fa-file-pdf"></i> Unda Ripoti Kamili
-              </button>
+          </div>
+          
+          <!-- Muda wa Ripoti (Hiari) - kwa Ripoti zote mbili hapa chini -->
+          <div class="chart-container">
+            <h4><i class="fas fa-calendar-alt"></i> Muda wa Ripoti (Hiari)</h4>
+            <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+              Kama huchagui muda, Ripoti itajumuisha kipindi chote (data zote).
+            </p>
+            <div class="form-row">
+              <div class="input-group">
+                <label for="reportStartDate"><i class="fas fa-calendar"></i> Kuanzia</label>
+                <input type="date" id="reportStartDate">
+              </div>
+              <div class="input-group">
+                <label for="reportEndDate"><i class="fas fa-calendar"></i> Hadi</label>
+                <input type="date" id="reportEndDate">
+              </div>
+              <div class="input-group" style="display: flex; align-items: flex-end;">
+                <button class="btn btn-secondary" onclick="clearReportDateRange()" style="width: 100%;">
+                  <i class="fas fa-times"></i> Futa Muda
+                </button>
+              </div>
             </div>
+          </div>
+          
+          <!-- Unda Ripoti Kamili - baada ya kuweka muda (kama ipo), ili iwe ya kitaalamu zaidi -->
+          <div class="chart-container">
+            <h4><i class="fas fa-file-pdf"></i> Ripoti Kamili</h4>
+            <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+              Ripoti kamili itajumuisha Mapato, Matumizi na Mifuko yote (au sehemu husika
+              kulingana na aina ya akaunti), kwa muda uliowekwa hapo juu (au kipindi chote).
+            </p>
+            <button class="btn btn-success" onclick="generateFinancialReport()" style="width: 100%;">
+              <i class="fas fa-file-pdf"></i> Unda Ripoti Kamili
+            </button>
           </div>
           
           <!-- Report Generator by Type -->
@@ -2804,11 +2877,13 @@ tr:hover {
                   <option value="Expense">Ripoti ya Matumizi</option>
                 </select>
               </div>
+              
+              <div class="input-group" style="display: flex; align-items: flex-end;">
+                <button class="btn btn-primary" onclick="generateTypeReport()" style="width: 100%;">
+                  <i class="fas fa-chart-line"></i> Unda Ripoti ya kwa Aina
+                </button>
+              </div>
             </div>
-            
-            <button class="btn btn-primary" onclick="generateTypeReport()">
-              <i class="fas fa-chart-line"></i> Unda Ripoti ya kwa Aina
-            </button>
             
             <p style="margin-top: 10px; font-size: 14px; color: #666;">
               <i class="fas fa-info-circle"></i> Ripoti hii itaonyesha mapato/matumizi yote.
@@ -2819,7 +2894,7 @@ tr:hover {
           <div class="chart-container" style="margin-top: 30px;">
             <h4><i class="fas fa-chart-pie"></i> Muhtasari wa Sasa</h4>
             
-            <div class="stats-cards" style="margin-top: 20px; grid-template-columns: repeat(2, 1fr);">
+            <div class="stats-cards" style="margin-top: 20px; grid-template-columns: repeat(3, 1fr);">
               <div class="stat-card income">
                 <div class="stat-icon">
                   <i class="fas fa-money-bill-wave"></i>
@@ -2839,9 +2914,7 @@ tr:hover {
                   <p>Matumizi</p>
                 </div>
               </div>
-            </div>
-
-            <div class="stats-cards" style="margin-top: 15px; grid-template-columns: 1fr;">
+              
               <div class="stat-card balance">
                 <div class="stat-icon">
                   <i class="fas fa-wallet"></i>
@@ -3321,7 +3394,7 @@ tr:hover {
 
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzD1PZjLQh_Dzl0mfgiASwJENFI58LE6H2CGhL3veH2UENXFK4WdXEJmtUCEEdYHIl1/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzSSNiBl1RY0r4Wt9Y4y47LE8BCk4-cpThlCaGlnzE8klHfTddWcqvm6DXB5fLlmYO5/exec";
     let currentDbId = null;
     let currentOrganization = '';
     let currentUserEmail = '';
@@ -3377,6 +3450,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // nyingine ya akaunti (mfano Shirika la kawaida) kuonekana kwa muda mfupi
     // kabla ya taarifa kupakiwa kutoka server.
     adjustStatsGridForAccountType();
+    restoreSidebarCollapseState();
     
     // Show main dashboard
     showMainDashboard();
@@ -3734,6 +3808,7 @@ function login() {
       // dashibodi haijaonekana kabisa (bila "delay") - hii inazuia "flash" ya
       // vipengele vya aina nyingine ya akaunti kuonekana kwa muda mfupi baada ya login
       adjustStatsGridForAccountType();
+      restoreSidebarCollapseState();
       
       showMainDashboard();
     } else {
@@ -4250,6 +4325,32 @@ function closeMemberAccountView() {
 function backToOverview() {
   closeMemberAccountView();
   showDashboard('overview');
+}
+
+// Funga/Fungua Menyu (Sidebar) kwa DESKTOP - menyu ikifungwa, eneo la kazi
+// (main-content) linachukua nafasi yote (full screen). Kubofya tena kunairudisha.
+function toggleSidebarCollapse() {
+  if (window.innerWidth <= 992) return; // Kwa simu, sidebar ina muundo wake tofauti
+  
+  const sidebar = document.getElementById('appSidebar');
+  if (!sidebar) return;
+  
+  const isCollapsed = sidebar.classList.toggle('collapsed');
+  try { localStorage.setItem('sidebarCollapsed', isCollapsed ? '1' : '0'); } catch (e) {}
+}
+
+// Rudisha hali ya Menyu (imefungwa/imefunguliwa) kutoka mara ya mwisho, kwa DESKTOP pekee
+function restoreSidebarCollapseState() {
+  if (window.innerWidth <= 992) return;
+  
+  const sidebar = document.getElementById('appSidebar');
+  if (!sidebar) return;
+  
+  try {
+    if (localStorage.getItem('sidebarCollapsed') === '1') {
+      sidebar.classList.add('collapsed');
+    }
+  } catch (e) {}
 }
 
 function showDashboard(dashboard) {
@@ -7336,6 +7437,11 @@ function showQuickNotification(message, type = 'success') {
    
     
     function loadReports() {
+  if (currentAccountType === 'savings_group') {
+    loadSavingsGroupReports();
+    return;
+  }
+  
   // Silent load without loading indicator
   fetch(SCRIPT_URL, {
     method: 'POST',
@@ -7355,6 +7461,62 @@ function showQuickNotification(message, type = 'success') {
   .catch(error => {
     console.log('Silent error loading reports:', error.message);
   });
+}
+
+// Ripoti kwa akaunti za Akiba, Hisa na Mikopo - dropdown ya "Ripoti kwa Aina" inajazwa
+// na Mapato, Matumizi, na Mifuko yote (ikiwemo za ziada alizoongeza mtumiaji)
+let reportTypeDropdownToken = 0;
+
+function loadSavingsGroupReports() {
+  // Kila wito mpya unapata namba yake ya kipekee - endapo wito wa zamani (uliochelewa
+  // kurudi) utarudi baadaye, hautaongeza tena mifuko kwenye dropdown (huzuia kujirudiarudia)
+  reportTypeDropdownToken++;
+  const myReportTypeToken = reportTypeDropdownToken;
+  
+  const reportTypeSelect = document.getElementById('reportType');
+  if (reportTypeSelect) {
+    reportTypeSelect.innerHTML = `
+      <option value="Income">Mapato</option>
+      <option value="Expense">Matumizi</option>
+    `;
+  }
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getFundsSummary', dbId: currentDbId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (myReportTypeToken !== reportTypeDropdownToken) return; // wito wa zamani, puuza
+    if (data.status === 'success' && reportTypeSelect) {
+      // Ongeza Mifuko yote kwenye dropdown ya "Ripoti kwa Aina"
+      (data.funds || []).forEach(fund => {
+        const option = document.createElement('option');
+        option.value = fund['Fund Name'];
+        option.textContent = 'Mfuko wa ' + fund['Fund Name'];
+        reportTypeSelect.appendChild(option);
+      });
+    }
+  })
+  .catch(error => console.log('Error loading savings group reports:', error.message));
+  
+  // Pata Jumla halisi ya Mapato/Matumizi kutoka kwenye miamala yenyewe
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'listTransactions', dbId: currentDbId, filter: {}, accountType: currentAccountType })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      const totalIncome = (data.transactions || []).filter(t => t['Transaction Type'] === 'Income').reduce((s, t) => s + (parseFloat(t.Amount) || 0), 0);
+      const totalExpense = (data.transactions || []).filter(t => t['Transaction Type'] === 'Expense').reduce((s, t) => s + (parseFloat(t.Amount) || 0), 0);
+      
+      document.getElementById('reportIncome').textContent = formatCurrency(totalIncome);
+      document.getElementById('reportExpense').textContent = formatCurrency(totalExpense);
+      document.getElementById('reportNet').textContent = formatCurrency(totalIncome - totalExpense);
+    }
+  })
+  .catch(error => console.log('Error loading savings group transaction totals:', error.message));
 }
     
     function updateReportStats(summary) {
@@ -7499,6 +7661,24 @@ function showQuickNotification(message, type = 'success') {
       });
     }
     
+    // Futa muda uliochaguliwa wa Ripoti (rudi kwenye "kipindi chote")
+    function clearReportDateRange() {
+      const startInput = document.getElementById('reportStartDate');
+      const endInput = document.getElementById('reportEndDate');
+      if (startInput) startInput.value = '';
+      if (endInput) endInput.value = '';
+    }
+    
+    // Soma muda wa Ripoti ulioweka mtumiaji (hiari) - "all" endapo hakuna uliochaguliwa
+    function getReportDateRange() {
+      const startInput = document.getElementById('reportStartDate');
+      const endInput = document.getElementById('reportEndDate');
+      return {
+        startDate: (startInput && startInput.value) ? startInput.value : 'all',
+        endDate: (endInput && endInput.value) ? endInput.value : 'all'
+      };
+    }
+    
     function generateFinancialReport() {
   Notiflix.Confirm.show(
     'Unda Ripoti Kamili',
@@ -7513,13 +7693,15 @@ function showQuickNotification(message, type = 'success') {
       reportBtn.disabled = true;
       reportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Inatengeneza...';
       
+      const dateRange = getReportDateRange();
+      
       fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({
-          action: 'generateFinancialReport',
+          action: currentAccountType === 'savings_group' ? 'generateSavingsGroupFullReport' : 'generateFinancialReport',
           dbId: currentDbId,
-          startDate: 'all',
-          endDate: 'all',
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate,
           accountType: currentAccountType // ADD THIS LINE
         })
       })
@@ -7530,7 +7712,7 @@ function showQuickNotification(message, type = 'success') {
         reportBtn.innerHTML = originalText;
         
         if (data.status === 'success') {
-          forceDownloadPDF(data.downloadUrl, data.fileName);
+          forceDownloadPDF(data.pdfBase64, data.fileName, data.mimeType, data.downloadUrl);
           
           // Silent success notification
           showQuickNotification('Ripoti imetengenezwa kikamilifu');
@@ -7557,7 +7739,8 @@ function generateTypeReport() {
     return;
   }
   
-  const reportTypeName = reportType === 'Income' ? 'Mapato' : 'Matumizi';
+  const selectedOption = document.getElementById('reportType').options[document.getElementById('reportType').selectedIndex];
+  const reportTypeName = selectedOption ? selectedOption.textContent : reportType;
   
   Notiflix.Confirm.show(
     'Unda Ripoti kwa Aina',
@@ -7572,12 +7755,16 @@ function generateTypeReport() {
       typeReportBtn.disabled = true;
       typeReportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Inatengeneza...';
       
+      const typeDateRange = getReportDateRange();
+      
       fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({
-          action: 'generateTypeReport',
+          action: currentAccountType === 'savings_group' ? 'generateSavingsGroupTypeReport' : 'generateTypeReport',
           dbId: currentDbId,
           reportType: reportType,
+          startDate: typeDateRange.startDate,
+          endDate: typeDateRange.endDate,
           accountType: currentAccountType // ADD THIS LINE
         })
       })
@@ -7588,7 +7775,7 @@ function generateTypeReport() {
         typeReportBtn.innerHTML = originalText;
         
         if (data.status === 'success') {
-          forceDownloadPDF(data.downloadUrl, data.fileName);
+          forceDownloadPDF(data.pdfBase64, data.fileName, data.mimeType, data.downloadUrl);
           showQuickNotification(`Ripoti ya ${reportTypeName} imetengenezwa`);
         } else {
           showQuickNotification(data.message, 'error');
@@ -7605,25 +7792,57 @@ function generateTypeReport() {
   );
 }
     
-    // ============ PDF Download: App ya AppCreator24 (Android WebView) ============
-    // Hii ni toleo la financial.html lililokusudiwa kwa App ya AppCreator24 PEKEE.
-    // Linatumia URL halisi ya https:// kuelekea faili la Google Drive (linaloweza
-    // kufikiwa na "Anyone with the link") — SI blob:, SI data: URI, SI window mpya.
-    //
-    // MUHIMU: hatutumii target="_blank" wala window.open() kwa sababu WebView nyingi za
-    // app-builders kama AppCreator24 HAZIWEZI kufungua dirisha/tab jipya (hazina
-    // "multi-window support"). Link/click ya namna hiyo hushindwa kimya kimya - hakuna
-    // navigation halisi inayotokea, hivyo download listener ya asili ya Android
-    // (inayotumia DownloadManager) haiwahi kuguswa kabisa. Kwa kubadilisha "location" ya
-    // dirisha lililopo moja kwa moja, WebView inashika mwitikio wa faili (Content-Disposition:
-    // attachment) na kuukabidhi kwa DownloadManager, huku ukurasa wa App ukibaki palepale
-    // (kwa majibu ya "attachment", WebView haiachi ukurasa wa sasa - inaanzisha download tu).
-    function forceDownloadPDF(downloadUrl, fileName) {
-      if (!downloadUrl) {
-        showQuickNotification('Imeshindwa kupakua ripoti', 'error');
+    // ============ PDF Download: Website ya kawaida ============
+    // Hii ni toleo la financial.html lililokusudiwa kwa TOVUTI (browser ya kawaida) PEKEE:
+    // Chrome, Firefox, Safari, Edge n.k, desktop au simu. Linatumia blob: kutoka kwenye
+    // PDF base64 iliyotumwa na server — hii inapakua faili moja kwa moja kwenye kifaa
+    // cha mtumiaji bila kugusa Google Drive kabisa (hakuna account picker/login).
+    function forceDownloadPDF(pdfBase64, fileName, mimeType, fallbackDriveUrl) {
+      if (!pdfBase64) {
+        // Ikiwa kwa sababu yoyote base64 haipo, tumia URL ya Drive kama njia ya mwisho
+        if (fallbackDriveUrl) {
+          const link = document.createElement('a');
+          link.href = fallbackDriveUrl;
+          link.download = fileName || '';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          showQuickNotification('Imeshindwa kupakua ripoti', 'error');
+        }
         return;
       }
-      window.location.href = downloadUrl;
+      try {
+        const byteCharacters = atob(pdfBase64);
+        const byteArray = new Uint8Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteArray[i] = byteCharacters.charCodeAt(i);
+        }
+
+        const blob = new Blob([byteArray], { type: mimeType || 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 10000);
+      } catch (e) {
+        console.error('PDF download error:', e);
+        if (fallbackDriveUrl) {
+          const link = document.createElement('a');
+          link.href = fallbackDriveUrl;
+          link.download = fileName || '';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          showQuickNotification('Imeshindwa kupakua ripoti', 'error');
+        }
+      }
     }
     
    // Save minimum amount silently without showing loading
