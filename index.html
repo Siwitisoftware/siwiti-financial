@@ -695,6 +695,51 @@ tr:hover {
   height: 100%;
 }
 
+/* Tabs za Mipangilio ya Akiba, Hisa na Mikopo */
+.settings-tab-bar {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 2px solid #eef2f6;
+  margin-bottom: 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.settings-tab-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #7f8c9a;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.settings-tab-btn i {
+  margin-right: 5px;
+}
+
+.settings-tab-btn:hover {
+  color: var(--secondary);
+}
+
+.settings-tab-btn.active {
+  color: var(--secondary);
+  border-bottom-color: var(--secondary);
+}
+
+.settings-tab-pane {
+  display: none;
+}
+
+.settings-tab-pane.active {
+  display: block;
+}
+
 .rte-editor {
   min-height: 220px;
   max-height: 500px;
@@ -3321,152 +3366,353 @@ tr:hover {
     </div>
   </div>
   
+  <!-- Logo ya Shirika/Kikundi - inatumika kwenye Ripoti, Fomu na Mkataba -->
+  <div class="chart-container" style="margin-top: 30px;">
+    <h4><i class="fas fa-image"></i> Logo ya Shirika/Kikundi</h4>
+    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+      Pakia Logo ili ionekane kwenye Ripoti, Fomu na Mkataba wa Mkopo. Ikiwa hakuna Logo
+      iliyowekwa, hati hizo zitabaki bila Logo kama zilivyo sasa.
+    </p>
+    
+    <div id="logoPreviewContainer" style="margin-bottom: 15px;">
+      <img id="logoPreviewImg" src="" style="display:none; max-height:100px; max-width:220px; border:1px solid #eef2f6; border-radius:8px; padding:8px; background:#f8fafc;">
+      <p id="logoNoLogoMsg" style="color:#999; font-size:13px; margin:0;">Hakuna Logo iliyowekwa bado.</p>
+    </div>
+    
+    <div class="input-group">
+      <label for="logoFileInput"><i class="fas fa-upload"></i> Pakia Logo (PNG au JPG)</label>
+      <input type="file" id="logoFileInput" accept="image/*" onchange="handleLogoFileSelect(event)">
+    </div>
+    
+    <div class="input-group">
+      <label for="logoPositionSelect"><i class="fas fa-align-center"></i> Logo Ikae Upande Gani</label>
+      <select id="logoPositionSelect">
+        <option value="left">Kushoto</option>
+        <option value="center">Katikati</option>
+        <option value="right">Kulia</option>
+        <option value="both">Kushoto na Kulia</option>
+      </select>
+    </div>
+    
+    <div class="input-group">
+      <label for="logoSizeInput"><i class="fas fa-expand-alt"></i> Ukubwa wa Logo (px): <span id="logoSizeValue">55</span></label>
+      <input type="range" id="logoSizeInput" min="20" max="500" step="5" value="55" oninput="document.getElementById('logoSizeValue').textContent = this.value">
+    </div>
+    
+    <div class="input-group">
+      <label id="logoDocsHeading"><i class="fas fa-file-alt"></i> Logo Ionekane kwenye Hati Zipi</label>
+      <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 6px;">
+        <div id="logoLoanDocsGroup" style="display: flex; flex-wrap: wrap; gap: 15px;">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:400; cursor:pointer;">
+            <input type="checkbox" id="logoDocForm" checked> Fomu ya Mkopo
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-weight:400; cursor:pointer;">
+            <input type="checkbox" id="logoDocContract" checked> Mkataba wa Mkopo
+          </label>
+        </div>
+        <label style="display:flex; align-items:center; gap:6px; font-weight:400; cursor:pointer;">
+          <input type="checkbox" id="logoDocReport" checked> Ripoti
+        </label>
+      </div>
+    </div>
+    
+    <button class="btn btn-success" onclick="saveOrganizationLogo()" id="saveLogoBtn">
+      <i class="fas fa-save"></i> Hifadhi Logo
+    </button>
+    <button class="btn btn-danger" onclick="removeOrganizationLogo()" id="removeLogoBtn" style="margin-top:10px; display:none; width:100%;">
+      <i class="fas fa-trash"></i> Ondoa Logo
+    </button>
+  </div>
+  
+  <!-- Muhuri wa Shirika/Kikundi - inatumika kwenye Ripoti, Fomu na Mkataba -->
+  <div class="chart-container" style="margin-top: 30px;">
+    <h4><i class="fas fa-stamp"></i> Muhuri wa Shirika/Kikundi</h4>
+    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+      Pakia Muhuri ili uonekane kwenye Ripoti, Fomu na Mkataba wa Mkopo. Ikiwa hakuna Muhuri
+      uliowekwa, hati hizo zitabaki bila Muhuri kama zilivyo sasa. Tofauti na Logo, Muhuri
+      HAUNA "Upande" wa kuchagua - unakaa moja kwa moja juu ya dash ya "Muhuri wa
+      Kikundi/Shirika" (Fomu), na juu ya dash ya sahihi ya MKOPESHAJI (Mkataba).
+    </p>
+    
+    <div id="stampPreviewContainer" style="margin-bottom: 15px;">
+      <img id="stampPreviewImg" src="" style="display:none; max-height:100px; max-width:220px; border:1px solid #eef2f6; border-radius:8px; padding:8px; background:#f8fafc;">
+      <p id="stampNoStampMsg" style="color:#999; font-size:13px; margin:0;">Hakuna Muhuri uliowekwa bado.</p>
+    </div>
+    
+    <div class="input-group">
+      <label for="stampFileInput"><i class="fas fa-upload"></i> Pakia Muhuri (PNG au JPG)</label>
+      <input type="file" id="stampFileInput" accept="image/*" onchange="handleStampFileSelect(event)">
+    </div>
+    
+    <div class="input-group">
+      <label for="stampSizeInput"><i class="fas fa-expand-alt"></i> Ukubwa wa Muhuri (px): <span id="stampSizeValue">60</span></label>
+      <input type="range" id="stampSizeInput" min="20" max="500" step="5" value="60" oninput="document.getElementById('stampSizeValue').textContent = this.value">
+    </div>
+    
+    <div class="input-group">
+      <label id="stampDocsHeading"><i class="fas fa-file-alt"></i> Muhuri Ionekane kwenye Hati Zipi</label>
+      <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 6px;">
+        <div id="stampLoanDocsGroup" style="display: flex; flex-wrap: wrap; gap: 15px;">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:400; cursor:pointer;">
+            <input type="checkbox" id="stampDocForm" checked> Fomu ya Mkopo
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-weight:400; cursor:pointer;">
+            <input type="checkbox" id="stampDocContract" checked> Mkataba wa Mkopo
+          </label>
+        </div>
+        <label style="display:flex; align-items:center; gap:6px; font-weight:400; cursor:pointer;">
+          <input type="checkbox" id="stampDocReport" checked> Ripoti
+        </label>
+      </div>
+    </div>
+    
+    <button class="btn btn-success" onclick="saveOrganizationStamp()" id="saveStampBtn">
+      <i class="fas fa-save"></i> Hifadhi Muhuri
+    </button>
+    <button class="btn btn-danger" onclick="removeOrganizationStamp()" id="removeStampBtn" style="margin-top:10px; display:none; width:100%;">
+      <i class="fas fa-trash"></i> Ondoa Muhuri
+    </button>
+  </div>
+  
+  <!-- Sahihi ya Afisa Mkopo - inatumika Fomu ya Mkopo pekee (Akiba, Hisa na Mikopo tu) -->
+  <div class="chart-container hidden" style="margin-top: 30px; display: none;" id="loanOfficerSignatureSection">
+    <h4><i class="fas fa-signature"></i> Sahihi ya Afisa Mkopo</h4>
+    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+      Pakia Sahihi ya Afisa Mkopo ili ionekane juu ya dash ya "Sahihi ya Afisa Mkopo"
+      kwenye Fomu ya Mkopo. Ikiwa hakuna Sahihi iliyowekwa, Fomu itabaki kama ilivyo
+      sasa. Kama Muhuri, Sahihi HAINA "Upande" - unakaa moja kwa moja juu ya dash yake.
+    </p>
+    
+    <div id="signaturePreviewContainer" style="margin-bottom: 15px;">
+      <img id="signaturePreviewImg" src="" style="display:none; max-height:100px; max-width:220px; border:1px solid #eef2f6; border-radius:8px; padding:8px; background:#f8fafc;">
+      <p id="signatureNoSignatureMsg" style="color:#999; font-size:13px; margin:0;">Hakuna Sahihi iliyowekwa bado.</p>
+    </div>
+    
+    <div class="input-group">
+      <label for="signatureFileInput"><i class="fas fa-upload"></i> Pakia Sahihi (PNG au JPG)</label>
+      <input type="file" id="signatureFileInput" accept="image/*" onchange="handleSignatureFileSelect(event)">
+    </div>
+    
+    <div class="input-group">
+      <label for="signatureSizeInput"><i class="fas fa-expand-alt"></i> Ukubwa wa Sahihi (px): <span id="signatureSizeValue">60</span></label>
+      <input type="range" id="signatureSizeInput" min="20" max="500" step="5" value="60" oninput="document.getElementById('signatureSizeValue').textContent = this.value">
+    </div>
+    
+    <button class="btn btn-success" onclick="saveLoanOfficerSignature()" id="saveSignatureBtn">
+      <i class="fas fa-save"></i> Hifadhi Sahihi
+    </button>
+    <button class="btn btn-danger" onclick="removeLoanOfficerSignature()" id="removeSignatureBtn" style="margin-top:10px; display:none; width:100%;">
+      <i class="fas fa-trash"></i> Ondoa Sahihi
+    </button>
+  </div>
+  
   <!-- Savings Group Settings (Akiba, Hisa na Mikopo) - inaonekana kwa aina hii ya akaunti pekee -->
   <div class="chart-container hidden" style="margin-top: 30px;" id="savingsGroupSettingsSection">
     <h4><i class="fas fa-piggy-bank"></i> Mipangilio ya Akiba, Hisa na Mikopo</h4>
     
-    <div class="input-group">
-      <label for="settingTargetAmount"><i class="fas fa-bullseye"></i> Kiasi Lengwa (Target)</label>
-      <input type="number" id="settingTargetAmount" placeholder="0.00" min="0" step="0.01">
-    </div>
-    
-    <div class="input-group">
-      <label for="settingInterestRate"><i class="fas fa-percentage"></i> Asilimia ya Riba (kwa Mkopo)</label>
-      <input type="number" id="settingInterestRate" placeholder="0" min="0" step="0.01">
-      <small style="color: #666; display: block; margin-top: 5px;">
-        <i class="fas fa-info-circle"></i> Riba hii itatumika kila mkopo mpya unapotolewa (mfano 10 = 10%)
-      </small>
-    </div>
-    
-    <div class="input-group">
-      <label for="settingLoanTermUnit"><i class="fas fa-clock"></i> Kipimo cha Muda (kwa Riba)</label>
-      <select id="settingLoanTermUnit">
-        <option value="Mwezi">Kwa Mwezi</option>
-        <option value="Mwaka">Kwa Mwaka</option>
-      </select>
-    </div>
-    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
-      <i class="fas fa-info-circle"></i> Kipimo hiki kinaeleza jinsi Asilimia ya Riba
-      inavyokatwa: ikiwa "Kwa Mwezi", Riba inakatwa kwa KILA mwezi wa mkopo (idadi ya
-      miezi utaingiza wakati wa kutoa mkopo); ikiwa "Kwa Mwaka", Riba inakatwa kwa kila
-      mwaka. Mfano: Mkopo wa 50,000 kwa Riba ya 20% (Kwa Mwezi), Idadi ya Miezi = 3, ni
-      Riba 50,000 &times; 20% &times; 3 = 30,000; Jumla ya Kulipa = 80,000.
-    </p>
-    
-    <div class="form-row">
-      <div class="input-group">
-        <label for="settingLatePenaltyPercent"><i class="fas fa-exclamation-circle"></i> Ongezeko la Kutokulipa kwa Wakati (% kwa Mwezi)</label>
-        <input type="number" id="settingLatePenaltyPercent" placeholder="0" min="0" step="0.01">
-      </div>
-    </div>
-    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
-      <i class="fas fa-info-circle"></i> Endapo mkopo hautalipwa ndani ya Tarehe ya Kurejesha,
-      mfumo utaongeza ongezeko hili kiotomatiki kwa kila mwezi ulichelewa, kwenye Salio la mkopo.
-      Ongezeko na Riba VYOTE huingia kwenye Mfuko wa "Riba ya Mkopo".
-    </p>
-    
-    <div class="input-group">
-      <label for="settingMembershipFee"><i class="fas fa-id-card"></i> Ada ya Uanachama</label>
-      <input type="number" id="settingMembershipFee" placeholder="0.00" min="0" step="0.01">
-    </div>
-    
-    <button class="btn btn-success" onclick="saveSavingsGroupSettings()" id="saveSavingsGroupSettingsBtn">
-      <i class="fas fa-save"></i> Hifadhi Mipangilio Haya
-    </button>
-    <div id="saveSavingsGroupSettingsLoading" style="display: none; font-size: 12px; color: #666; margin-top: 5px; text-align: center;">
-      <i class="fas fa-spinner fa-spin"></i> Inahifadhi...
-    </div>
-    
-    <hr style="margin: 25px 0; border: none; border-top: 1px solid #eef2f6;">
-    
-    <h4><i class="fas fa-percentage"></i> Makundi ya Mgawo wa Kiasi (Allocation Groups)</h4>
-    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
-      Kila mchango wa "Income" utagawanywa kiotomatiki kulingana na makundi haya. Mfano:
-      TZS 4,000 ukiwa na 75% Hisa na 25% Akiba, utagawanyika kuwa TZS 3,000 kwenye Hisa na
-      TZS 1,000 kwenye Akiba. Unaweza kuweka kundi moja (100%), mawili, au zaidi.
-    </p>
-    
-    <div id="allocationGroupsList"></div>
-    
-    <button class="btn btn-secondary" onclick="addAllocationGroupRow()" style="margin-top: 10px;">
-      <i class="fas fa-plus"></i> Ongeza Kundi
-    </button>
-    
-    <div style="margin-top: 12px; font-weight: 600;">
-      Jumla ya Asilimia: <span id="allocationGroupsTotalPercent">0</span>%
-      <span id="allocationGroupsTotalWarning" style="color: var(--danger); font-weight: 600; display: none;">
-        (Jumla lazima isizidi 100%)
-      </span>
-    </div>
-    
-    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eef2f6;">
-    
-    <h5 style="margin-bottom: 8px;"><i class="fas fa-tags"></i> Categories Zinazogawanyika</h5>
-    <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
-      Chagua Category (moja au zaidi) ambazo mchango wake utagawanywa kulingana na Makundi ya
-      Mgawo hapo juu. Categories za "Akiba", "Hisa", "Faini" na "Riba ya Mkopo" HAZIONESHWI
-      hapa kwa makusudi - zenyewe ni mifuko ya msingi (pool) na HUINGIA MOJA KWA MOJA humo
-      bila kugawanyika. Category isiyochaguliwa hapa (mfano "Mchango wa Mwanachama") itaingia
-      moja kwa moja kwenye Mfuko wa Akiba kwa chaguo-msingi.
-    </p>
-    <div id="splitCategoriesList" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;"></div>
-    
-    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eef2f6;">
-    
-    <h5 style="margin-bottom: 8px;"><i class="fas fa-plus-circle"></i> Ongeza Category ya Mapato Mpya</h5>
-    <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
-      Category mpya utakayoongeza hapa itapata Mfuko wake wenyewe kwenye "Gundua" kiotomatiki,
-      na itaonekana pia kwenye fomu ya Miamala (Mapato).
-    </p>
-    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-      <input type="text" id="newCategoryNameInput" placeholder="mfano: Mfuko wa Dharura" style="flex: 1;">
-      <button class="btn btn-primary" onclick="addCustomCategory()">
-        <i class="fas fa-plus"></i> Ongeza
+    <div class="settings-tab-bar">
+      <button type="button" class="settings-tab-btn active" id="settingsTabBtn_general" onclick="switchSettingsTab('general')">
+        <i class="fas fa-sliders-h"></i> Jumla
+      </button>
+      <button type="button" class="settings-tab-btn" id="settingsTabBtn_interest" onclick="switchSettingsTab('interest')">
+        <i class="fas fa-percentage"></i> Riba na Mikopo
+      </button>
+      <button type="button" class="settings-tab-btn" id="settingsTabBtn_fines" onclick="switchSettingsTab('fines')">
+        <i class="fas fa-exclamation-triangle"></i> Faini
+      </button>
+      <button type="button" class="settings-tab-btn" id="settingsTabBtn_allocation" onclick="switchSettingsTab('allocation')">
+        <i class="fas fa-chart-pie"></i> Mgawo wa Fedha
+      </button>
+      <button type="button" class="settings-tab-btn" id="settingsTabBtn_categories" onclick="switchSettingsTab('categories')">
+        <i class="fas fa-tags"></i> Categories
       </button>
     </div>
     
-    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eef2f6;">
+    <!-- TAB: JUMLA -->
+    <div class="settings-tab-pane active" id="settingsTabPane_general">
+      <div class="input-group">
+        <label for="settingTargetAmount"><i class="fas fa-bullseye"></i> Kiasi Lengwa (Target)</label>
+        <input type="number" id="settingTargetAmount" placeholder="0.00" min="0" step="0.01">
+      </div>
+      
+      <div class="input-group">
+        <label for="settingMembershipFee"><i class="fas fa-id-card"></i> Ada ya Uanachama</label>
+        <input type="number" id="settingMembershipFee" placeholder="0.00" min="0" step="0.01">
+      </div>
+      
+      <button class="btn btn-success" onclick="saveSavingsGroupSettings()" id="saveSavingsGroupSettingsBtn">
+        <i class="fas fa-save"></i> Hifadhi Mipangilio ya Akiba, Hisa na Mikopo
+      </button>
+      <div id="saveSavingsGroupSettingsLoading" style="display: none; font-size: 12px; color: #666; margin-top: 5px; text-align: center;">
+        <i class="fas fa-spinner fa-spin"></i> Inahifadhi...
+      </div>
+    </div>
     
-    <h5 style="margin-bottom: 8px;"><i class="fas fa-plus-circle"></i> Ongeza Category ya Matumizi Mpya</h5>
-    <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
-      Category hii itaonekana kwenye fomu ya Miamala (Matumizi). Haihitaji mfuko wake
-      mwenyewe - chanzo cha fedha kinachaguliwa tofauti wakati wa kuingiza muamala.
-    </p>
-    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-      <input type="text" id="newExpenseCategoryNameInput" placeholder="mfano: Usafiri" style="flex: 1;">
-      <button class="btn btn-primary" onclick="addCustomExpenseCategoryUI()">
-        <i class="fas fa-plus"></i> Ongeza
+    <!-- TAB: RIBA NA MIKOPO -->
+    <div class="settings-tab-pane" id="settingsTabPane_interest">
+      <h5 style="margin: 0 0 8px;"><i class="fas fa-percentage"></i> RIBA YA KAWAIDA</h5>
+      <div class="input-group">
+        <label for="settingInterestRate"><i class="fas fa-percentage"></i> Asilimia ya Riba (kwa Mkopo)</label>
+        <input type="number" id="settingInterestRate" placeholder="0" min="0" step="0.01">
+        <small style="color: #666; display: block; margin-top: 5px;">
+          <i class="fas fa-info-circle"></i> Riba hii itatumika kila mkopo mpya unapotolewa (mfano 10 = 10%)
+        </small>
+      </div>
+      
+      <div class="input-group">
+        <label for="settingLoanTermUnit"><i class="fas fa-clock"></i> Kipimo cha Muda (kwa Riba)</label>
+        <select id="settingLoanTermUnit">
+          <option value="Mwezi">Kwa Mwezi</option>
+          <option value="Mwaka">Kwa Mwaka</option>
+        </select>
+      </div>
+      <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+        <i class="fas fa-info-circle"></i> Kipimo hiki kinaeleza jinsi Asilimia ya Riba
+        inavyokatwa: ikiwa "Kwa Mwezi", Riba inakatwa kwa KILA mwezi wa mkopo (idadi ya
+        miezi utaingiza wakati wa kutoa mkopo); ikiwa "Kwa Mwaka", Riba inakatwa kwa kila
+        mwaka. Mfano: Mkopo wa 50,000 kwa Riba ya 20% (Kwa Mwezi), Idadi ya Miezi = 3, ni
+        Riba 50,000 &times; 20% &times; 3 = 30,000; Jumla ya Kulipa = 80,000. (Mfumo huu
+        unatumika endapo "Tumia Viwango vya Riba kwa Muda wa Mkopo" hapa chini HAIJAWEKWA tick.)
+      </p>
+      
+      <h5 style="margin: 25px 0 8px;"><i class="fas fa-layer-group"></i> VIWANGO VYA RIBA KWA MUDA WA MKOPO</h5>
+      <div class="input-group">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" id="settingUseDurationBasedInterest" onchange="toggleDurationRatesSection()" style="width: 18px; height: 18px;">
+          <span>Tumia Viwango vya Riba kwa Muda wa Mkopo</span>
+        </label>
+        <small style="color: #666; display: block; margin-top: 5px;">
+          <i class="fas fa-info-circle"></i> Ukiweka tick hapa, Riba HAITOHESABIWA tena kwa
+          "Asilimia ya Riba" iliyo juu - badala yake, mfumo utatafuta kiwango kinacholingana
+          na Idadi ya Miezi ya mkopo, kutoka kwenye orodha hapa chini. Riba hii SIYO ya kila
+          mwezi wala "compound" - ni riba MOJA TU ya mkopo mzima kwa kipindi hicho.
+        </small>
+      </div>
+      
+      <div class="hidden" id="durationRatesTableSection" style="margin-top: 15px;">
+        <div class="table-responsive" style="margin-top: 0; margin-bottom: 15px;">
+          <table id="durationRatesTable"></table>
+        </div>
+        
+        <button class="btn btn-secondary" onclick="addDurationRateRow()" style="margin-bottom: 15px;">
+          <i class="fas fa-plus"></i> Ongeza Kiwango
+        </button>
+        
+        <button class="btn btn-success" onclick="saveDurationRates()" style="width: 100%;">
+          <i class="fas fa-save"></i> Hifadhi Viwango vya Riba
+        </button>
+      </div>
+      
+      <h5 style="margin: 25px 0 8px;"><i class="fas fa-exclamation-circle"></i> ONGEZEKO LA KUTOKULIPA KWA WAKATI</h5>
+      <div class="form-row">
+        <div class="input-group">
+          <label for="settingLatePenaltyPercent"><i class="fas fa-exclamation-circle"></i> Ongezeko la Kutokulipa kwa Wakati (% kwa Mwezi)</label>
+          <input type="number" id="settingLatePenaltyPercent" placeholder="0" min="0" step="0.01">
+        </div>
+      </div>
+      <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+        <i class="fas fa-info-circle"></i> Endapo mkopo hautalipwa ndani ya Tarehe ya Kurejesha,
+        mfumo utaongeza ongezeko hili kiotomatiki kwa kila mwezi ulichelewa, kwenye Salio la mkopo.
+        Ongezeko na Riba VYOTE huingia kwenye Mfuko wa "Riba ya Mkopo".
+      </p>
+      
+      <button class="btn btn-success" onclick="saveSavingsGroupSettings()">
+        <i class="fas fa-save"></i> Hifadhi Mipangilio ya Akiba, Hisa na Mikopo
       </button>
     </div>
     
-    <button class="btn btn-success" onclick="saveAllocationGroups()" style="margin-top: 15px;">
-      <i class="fas fa-save"></i> Hifadhi Makundi ya Mgawo
-    </button>
-  </div>
-  
-  <!-- Aina za Faini (Fine Types) - kwa Akaunti za Akiba, Hisa na Mikopo pekee -->
-  <div class="chart-container hidden" id="savingsFineTypesSection" style="margin-top: 30px; display: none;">
-    <h4><i class="fas fa-exclamation-triangle"></i> FAINI ZA KIKUNDI</h4>
-    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
-      Ongeza aina mbalimbali za faini (mfano "Faini ya Kuchelewa", "Faini ya Kupiga Kelele")
-      pamoja na kiasi chake. Aina hizi zitaonekana kwenye dropdown ya Category (Mapato) na
-      pia kwenye orodha ya kuchagua faini endapo mtumiaji ataweka tick "Jumuisha Faini".
-    </p>
-    
-    <div id="fineTypesList" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;"></div>
-    
-    <div class="form-row">
-      <div class="input-group">
-        <label for="newFineTypeName"><i class="fas fa-tag"></i> Jina la Faini</label>
-        <input type="text" id="newFineTypeName" placeholder="mfano: Faini ya Kuchelewa">
+    <!-- TAB: FAINI -->
+    <div class="settings-tab-pane" id="settingsTabPane_fines">
+      <h4 style="margin-top: 0;"><i class="fas fa-exclamation-triangle"></i> FAINI ZA KIKUNDI</h4>
+      <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+        Ongeza aina mbalimbali za faini (mfano "Faini ya Kuchelewa", "Faini ya Kupiga Kelele")
+        pamoja na kiasi chake. Aina hizi zitaonekana kwenye dropdown ya Category (Mapato) na
+        pia kwenye orodha ya kuchagua faini endapo mtumiaji ataweka tick "Jumuisha Faini".
+      </p>
+      
+      <div id="fineTypesList" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;"></div>
+      
+      <div class="form-row">
+        <div class="input-group">
+          <label for="newFineTypeName"><i class="fas fa-tag"></i> Jina la Faini</label>
+          <input type="text" id="newFineTypeName" placeholder="mfano: Faini ya Kuchelewa">
+        </div>
+        <div class="input-group">
+          <label for="newFineTypeAmount"><i class="fas fa-money-bill"></i> Kiasi (TZS)</label>
+          <input type="number" id="newFineTypeAmount" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="input-group" style="display: flex; align-items: flex-end;">
+          <button class="btn btn-primary" onclick="addFineTypeUI()" style="width: 100%;">
+            <i class="fas fa-plus"></i> Ongeza Aina ya Faini
+          </button>
+        </div>
       </div>
-      <div class="input-group">
-        <label for="newFineTypeAmount"><i class="fas fa-money-bill"></i> Kiasi (TZS)</label>
-        <input type="number" id="newFineTypeAmount" placeholder="0.00" min="0" step="0.01">
+    </div>
+    
+    <!-- TAB: MGAWO WA FEDHA -->
+    <div class="settings-tab-pane" id="settingsTabPane_allocation">
+      <h4 style="margin-top: 0;"><i class="fas fa-percentage"></i> Makundi ya Mgawo wa Kiasi (Allocation Groups)</h4>
+      <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+        Kila mchango wa "Income" utagawanywa kiotomatiki kulingana na makundi haya. Mfano:
+        TZS 4,000 ukiwa na 75% Hisa na 25% Akiba, utagawanyika kuwa TZS 3,000 kwenye Hisa na
+        TZS 1,000 kwenye Akiba. Unaweza kuweka kundi moja (100%), mawili, au zaidi.
+      </p>
+      
+      <div id="allocationGroupsList"></div>
+      
+      <button class="btn btn-secondary" onclick="addAllocationGroupRow()" style="margin-top: 10px;">
+        <i class="fas fa-plus"></i> Ongeza Kundi
+      </button>
+      
+      <div style="margin-top: 12px; font-weight: 600;">
+        Jumla ya Asilimia: <span id="allocationGroupsTotalPercent">0</span>%
+        <span id="allocationGroupsTotalWarning" style="color: var(--danger); font-weight: 600; display: none;">
+          (Jumla lazima isizidi 100%)
+        </span>
       </div>
-      <div class="input-group" style="display: flex; align-items: flex-end;">
-        <button class="btn btn-primary" onclick="addFineTypeUI()" style="width: 100%;">
-          <i class="fas fa-plus"></i> Ongeza Aina ya Faini
+      
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid #eef2f6;">
+      
+      <h5 style="margin-bottom: 8px;"><i class="fas fa-tags"></i> Categories Zinazogawanyika</h5>
+      <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+        Chagua Category (moja au zaidi) ambazo mchango wake utagawanywa kulingana na Makundi ya
+        Mgawo hapo juu. Categories za "Akiba", "Hisa", "Faini" na "Riba ya Mkopo" HAZIONESHWI
+        hapa kwa makusudi - zenyewe ni mifuko ya msingi (pool) na HUINGIA MOJA KWA MOJA humo
+        bila kugawanyika. Category isiyochaguliwa hapa (mfano "Mchango wa Mwanachama") itaingia
+        moja kwa moja kwenye Mfuko wa Akiba kwa chaguo-msingi.
+      </p>
+      <div id="splitCategoriesList" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;"></div>
+      
+      <button class="btn btn-success" onclick="saveAllocationGroups()" style="margin-top: 15px;">
+        <i class="fas fa-save"></i> Hifadhi Makundi ya Mgawo
+      </button>
+    </div>
+    
+    <!-- TAB: CATEGORIES -->
+    <div class="settings-tab-pane" id="settingsTabPane_categories">
+      <h5 style="margin-top: 0; margin-bottom: 8px;"><i class="fas fa-plus-circle"></i> Ongeza Category ya Mapato Mpya</h5>
+      <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+        Category mpya utakayoongeza hapa itapata Mfuko wake wenyewe kwenye "Gundua" kiotomatiki,
+        na itaonekana pia kwenye fomu ya Miamala (Mapato).
+      </p>
+      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <input type="text" id="newCategoryNameInput" placeholder="mfano: Mfuko wa Dharura" style="flex: 1;">
+        <button class="btn btn-primary" onclick="addCustomCategory()">
+          <i class="fas fa-plus"></i> Ongeza
+        </button>
+      </div>
+      
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid #eef2f6;">
+      
+      <h5 style="margin-bottom: 8px;"><i class="fas fa-plus-circle"></i> Ongeza Category ya Matumizi Mpya</h5>
+      <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+        Category hii itaonekana kwenye fomu ya Miamala (Matumizi). Haihitaji mfuko wake
+        mwenyewe - chanzo cha fedha kinachaguliwa tofauti wakati wa kuingiza muamala.
+      </p>
+      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <input type="text" id="newExpenseCategoryNameInput" placeholder="mfano: Usafiri" style="flex: 1;">
+        <button class="btn btn-primary" onclick="addCustomExpenseCategoryUI()">
+          <i class="fas fa-plus"></i> Ongeza
         </button>
       </div>
     </div>
@@ -3779,7 +4025,7 @@ tr:hover {
 
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-WLgK2r_HpEXOJ577_GBC2XCf11S_32rXjUsAPd_9AQGAhtatzgG6n3pnTIfFRKY/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyr3D6kKgBoJlnDwb9NqLhHHPy4CdvEh7bgKTuYWOlBs8-YjtjlROYXnvRh8RbL2GB/exec";
     let currentDbId = null;
     let currentOrganization = '';
     let currentUserEmail = '';
@@ -4056,20 +4302,29 @@ function adjustStatsGridForAccountType() {
   
   // ============ Vipengele vya Mipangilio (Settings) - vionekane sahihi MARA MOJA ============
   const savingsSettingsSection = document.getElementById('savingsGroupSettingsSection');
-  const savingsFineTypesSection = document.getElementById('savingsFineTypesSection');
   const autoIncrementSection = document.getElementById('autoIncrementSection');
   const leadersSection = document.getElementById('leadersSection');
   const accountTypeChangeSection = document.getElementById('accountTypeChangeSection');
+  const loanOfficerSignatureSection = document.getElementById('loanOfficerSignatureSection');
+  const logoLoanDocsGroup = document.getElementById('logoLoanDocsGroup');
+  const stampLoanDocsGroup = document.getElementById('stampLoanDocsGroup');
+  const logoDocsHeading = document.getElementById('logoDocsHeading');
+  const stampDocsHeading = document.getElementById('stampDocsHeading');
   
   if (currentAccountType === 'savings_group') {
     if (savingsSettingsSection) { savingsSettingsSection.style.display = 'block'; savingsSettingsSection.classList.remove('hidden'); }
-    if (savingsFineTypesSection) { savingsFineTypesSection.style.display = 'block'; savingsFineTypesSection.classList.remove('hidden'); }
     if (autoIncrementSection) autoIncrementSection.style.display = 'none';
     if (leadersSection) leadersSection.style.display = 'none';
     if (accountTypeChangeSection) accountTypeChangeSection.style.display = 'none';
+    // Item 1: Sahihi ya Afisa Mkopo ni ya Fomu ya Mkopo pekee (Akiba, Hisa na Mikopo)
+    if (loanOfficerSignatureSection) { loanOfficerSignatureSection.style.display = 'block'; loanOfficerSignatureSection.classList.remove('hidden'); }
+    // Item 2/3: Fomu na Mkataba ni chaguo halali kwa akaunti hii - onesha checkbox zote
+    if (logoLoanDocsGroup) { logoLoanDocsGroup.style.display = 'flex'; logoLoanDocsGroup.classList.remove('hidden'); }
+    if (stampLoanDocsGroup) { stampLoanDocsGroup.style.display = 'flex'; stampLoanDocsGroup.classList.remove('hidden'); }
+    if (logoDocsHeading) logoDocsHeading.textContent = 'Logo Ionekane kwenye Hati Zipi';
+    if (stampDocsHeading) stampDocsHeading.textContent = 'Muhuri Ionekane kwenye Hati Zipi';
   } else {
     if (savingsSettingsSection) { savingsSettingsSection.style.display = 'none'; savingsSettingsSection.classList.add('hidden'); }
-    if (savingsFineTypesSection) { savingsFineTypesSection.style.display = 'none'; savingsFineTypesSection.classList.add('hidden'); }
     if (currentAccountType === 'personal') {
       if (autoIncrementSection) autoIncrementSection.style.display = 'none';
       if (leadersSection) leadersSection.style.display = 'none';
@@ -4078,6 +4333,14 @@ function adjustStatsGridForAccountType() {
       if (leadersSection) leadersSection.style.display = 'block';
     }
     if (accountTypeChangeSection) accountTypeChangeSection.style.display = 'block';
+    // Item 1: Akaunti za kawaida hazina Fomu ya Mkopo - ficha Sahihi ya Afisa Mkopo kabisa
+    if (loanOfficerSignatureSection) { loanOfficerSignatureSection.style.display = 'none'; loanOfficerSignatureSection.classList.add('hidden'); }
+    // Item 2/3/5: Akaunti za kawaida hazina Fomu wala Mkataba - ficha checkbox hizo
+    // kabisa, Logo/Muhuri ni kwa ajili ya Ripoti tu kwa akaunti hizi
+    if (logoLoanDocsGroup) { logoLoanDocsGroup.style.display = 'none'; logoLoanDocsGroup.classList.add('hidden'); }
+    if (stampLoanDocsGroup) { stampLoanDocsGroup.style.display = 'none'; stampLoanDocsGroup.classList.add('hidden'); }
+    if (logoDocsHeading) logoDocsHeading.textContent = 'Logo Itaonekana kwenye Ripoti';
+    if (stampDocsHeading) stampDocsHeading.textContent = 'Muhuri Utaonekana kwenye Ripoti';
   }
   
   if (!statsGrid || !membersCard) return;
@@ -7619,8 +7882,9 @@ function showQuickNotification(message, type = 'success') {
     cancelButtonColor: '#e74c3c',
     width: '650px',
     didOpen: () => {
-      // Only load members for organization accounts
-      if (accountType === 'organization') {
+      // Pakia wanachama kwa akaunti za "organization" NA "savings_group" (Item 1: jina
+      // la mwanachama lijaze kiotomatiki wakati wa kuhariri, siyo tu kwa organization)
+      if (accountType === 'organization' || accountType === 'savings_group') {
         const memberSelect = document.getElementById('editTransactionMemberId');
         
         // First, try to load members
@@ -8482,6 +8746,461 @@ function fetchLatestMinimumAmount() {
     
     Notiflix.Notify.failure('Hitilafu ya mtandao: ' + error.message);
   });
+}
+
+// ============ Logo ya Shirika/Kikundi (Item 1/2/3) ============
+let pendingLogoDataUri = null;
+
+// Inasoma picha aliyochagua mtumiaji, inaipunguza saizi (max 300px) na kuibadilisha
+// kuwa JPEG yenye ukubwa mdogo (base64), ili ihifadhike vizuri kwenye Settings bila
+// kuzidisha kikomo cha "cell" ya Google Sheets
+function handleLogoFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  if (!file.type.startsWith('image/')) {
+    Notiflix.Notify.failure('Tafadhali chagua faili la picha (PNG au JPG)');
+    return;
+  }
+  
+  // Picha zenye "transparency" (PNG, GIF, WebP) zibaki transparent - background nyeupe
+  // isijazwe kwa lazima, la sivyo inafunika maandishi yaliyopo chini yake (mfano Muhuri
+  // "overlay" kwenye Fomu/Mkataba)
+  const supportsTransparency = ['image/png', 'image/gif', 'image/webp'].includes(file.type);
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const maxDim = 300;
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > height) {
+        if (width > maxDim) {
+          height = Math.round(height * (maxDim / width));
+          width = maxDim;
+        }
+      } else {
+        if (height > maxDim) {
+          width = Math.round(width * (maxDim / height));
+          height = maxDim;
+        }
+      }
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!supportsTransparency) {
+        // JPEG haina "transparency" tayari - background nyeupe hapa haiondoi kitu
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      pendingLogoDataUri = supportsTransparency
+        ? canvas.toDataURL('image/png')
+        : canvas.toDataURL('image/jpeg', 0.85);
+      
+      const previewImg = document.getElementById('logoPreviewImg');
+      const noLogoMsg = document.getElementById('logoNoLogoMsg');
+      previewImg.src = pendingLogoDataUri;
+      previewImg.style.display = 'block';
+      if (noLogoMsg) noLogoMsg.style.display = 'none';
+      
+      document.getElementById('saveLogoBtn').disabled = false;
+    };
+    img.onerror = function() {
+      Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo. Jaribu picha nyingine.');
+    };
+    img.src = e.target.result;
+  };
+  reader.onerror = function() {
+    Notiflix.Notify.failure('Imeshindwa kusoma faili hiyo');
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveOrganizationLogo() {
+  // Item 3: kama hakuna picha mpya, tumia iliyopo tayari (ili kubadilisha Upande/Hati
+  // pekee kufanye kazi bila kulazimika kupakia picha upya)
+  const existingSrc = document.getElementById('logoPreviewImg').src;
+  const logoToSave = pendingLogoDataUri || (existingSrc && existingSrc.startsWith('data:') ? existingSrc : null);
+  
+  if (!logoToSave) {
+    Notiflix.Notify.failure('Tafadhali chagua picha kwanza');
+    return;
+  }
+  
+  const position = document.getElementById('logoPositionSelect').value;
+  const size = document.getElementById('logoSizeInput').value;
+  // Item 2/3: akaunti za kawaida hazina Fomu wala Mkataba - hazipaswi kuwa na chaguo
+  // hizo hata kama HTML bado ina "checked" (checkbox zimefichwa tu, siyo kuondolewa)
+  const documents = [];
+  if (currentAccountType === 'savings_group') {
+    if (document.getElementById('logoDocForm').checked) documents.push('form');
+    if (document.getElementById('logoDocContract').checked) documents.push('contract');
+  }
+  if (document.getElementById('logoDocReport').checked) documents.push('report');
+  
+  Notiflix.Loading.standard('Inahifadhi Logo...');
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'updateOrganizationLogo',
+      dbId: currentDbId,
+      logo: logoToSave,
+      position: position,
+      size: size,
+      documents: documents
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    Notiflix.Loading.remove();
+    if (data.status === 'success') {
+      showQuickNotification('Logo imehifadhiwa kikamilifu');
+      document.getElementById('removeLogoBtn').style.display = 'block';
+      pendingLogoDataUri = null;
+    } else {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kuhifadhi Logo');
+    }
+  })
+  .catch(error => {
+    Notiflix.Loading.remove();
+    console.error('Error saving logo:', error);
+    Notiflix.Notify.failure('Imeshindwa kuhifadhi Logo');
+  });
+}
+
+function removeOrganizationLogo() {
+  Notiflix.Confirm.show(
+    'Ondoa Logo',
+    'Una uhakika unataka kuondoa Logo? Ripoti, Fomu na Mkataba hazitakuwa na Logo tena.',
+    'Ndio, Ondoa',
+    'Hapana',
+    function() {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'deleteOrganizationLogo', dbId: currentDbId })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          pendingLogoDataUri = null;
+          const previewImg = document.getElementById('logoPreviewImg');
+          previewImg.style.display = 'none';
+          previewImg.src = '';
+          const noLogoMsg = document.getElementById('logoNoLogoMsg');
+          if (noLogoMsg) noLogoMsg.style.display = 'block';
+          document.getElementById('removeLogoBtn').style.display = 'none';
+          document.getElementById('logoFileInput').value = '';
+          showQuickNotification('Logo imeondolewa');
+        } else {
+          Notiflix.Notify.failure(data.message || 'Imeshindwa kuondoa Logo');
+        }
+      })
+      .catch(error => {
+        console.error('Error removing logo:', error);
+        Notiflix.Notify.failure('Imeshindwa kuondoa Logo');
+      });
+    }
+  );
+}
+
+// ============ Muhuri wa Shirika/Kikundi (Item 1/2/3) ============
+let pendingStampDataUri = null;
+
+function handleStampFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  if (!file.type.startsWith('image/')) {
+    Notiflix.Notify.failure('Tafadhali chagua faili la picha (PNG au JPG)');
+    return;
+  }
+  
+  // Muhuri KAWAIDA ni PNG yenye "transparency" (ndiyo maana inaelea juu ya maandishi
+  // bila kuyafunika) - background nyeupe isijazwe kwa lazima, la sivyo transparency
+  // yote inapotea na Muhuri unafunika maandishi yaliyopo chini yake
+  const supportsTransparency = ['image/png', 'image/gif', 'image/webp'].includes(file.type);
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const maxDim = 300;
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > height) {
+        if (width > maxDim) {
+          height = Math.round(height * (maxDim / width));
+          width = maxDim;
+        }
+      } else {
+        if (height > maxDim) {
+          width = Math.round(width * (maxDim / height));
+          height = maxDim;
+        }
+      }
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!supportsTransparency) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      pendingStampDataUri = supportsTransparency
+        ? canvas.toDataURL('image/png')
+        : canvas.toDataURL('image/jpeg', 0.85);
+      
+      const previewImg = document.getElementById('stampPreviewImg');
+      const noStampMsg = document.getElementById('stampNoStampMsg');
+      previewImg.src = pendingStampDataUri;
+      previewImg.style.display = 'block';
+      if (noStampMsg) noStampMsg.style.display = 'none';
+    };
+    img.onerror = function() {
+      Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo. Jaribu picha nyingine.');
+    };
+    img.src = e.target.result;
+  };
+  reader.onerror = function() {
+    Notiflix.Notify.failure('Imeshindwa kusoma faili hiyo');
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveOrganizationStamp() {
+  // Item 3: kama hakuna picha mpya, tumia iliyopo tayari
+  const existingSrc = document.getElementById('stampPreviewImg').src;
+  const stampToSave = pendingStampDataUri || (existingSrc && existingSrc.startsWith('data:') ? existingSrc : null);
+  
+  if (!stampToSave) {
+    Notiflix.Notify.failure('Tafadhali chagua picha kwanza');
+    return;
+  }
+  
+  const size = document.getElementById('stampSizeInput').value;
+  // Item 2/3: akaunti za kawaida hazina Fomu wala Mkataba
+  const documents = [];
+  if (currentAccountType === 'savings_group') {
+    if (document.getElementById('stampDocForm').checked) documents.push('form');
+    if (document.getElementById('stampDocContract').checked) documents.push('contract');
+  }
+  if (document.getElementById('stampDocReport').checked) documents.push('report');
+  
+  Notiflix.Loading.standard('Inahifadhi Muhuri...');
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'updateOrganizationStamp',
+      dbId: currentDbId,
+      stamp: stampToSave,
+      size: size,
+      documents: documents
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    Notiflix.Loading.remove();
+    if (data.status === 'success') {
+      showQuickNotification('Muhuri umehifadhiwa kikamilifu');
+      document.getElementById('removeStampBtn').style.display = 'block';
+      pendingStampDataUri = null;
+    } else {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kuhifadhi Muhuri');
+    }
+  })
+  .catch(error => {
+    Notiflix.Loading.remove();
+    console.error('Error saving stamp:', error);
+    Notiflix.Notify.failure('Imeshindwa kuhifadhi Muhuri');
+  });
+}
+
+function removeOrganizationStamp() {
+  Notiflix.Confirm.show(
+    'Ondoa Muhuri',
+    'Una uhakika unataka kuondoa Muhuri? Ripoti, Fomu na Mkataba hazitakuwa na Muhuri tena.',
+    'Ndio, Ondoa',
+    'Hapana',
+    function() {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'deleteOrganizationStamp', dbId: currentDbId })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          pendingStampDataUri = null;
+          const previewImg = document.getElementById('stampPreviewImg');
+          previewImg.style.display = 'none';
+          previewImg.src = '';
+          const noStampMsg = document.getElementById('stampNoStampMsg');
+          if (noStampMsg) noStampMsg.style.display = 'block';
+          document.getElementById('removeStampBtn').style.display = 'none';
+          document.getElementById('stampFileInput').value = '';
+          showQuickNotification('Muhuri umeondolewa');
+        } else {
+          Notiflix.Notify.failure(data.message || 'Imeshindwa kuondoa Muhuri');
+        }
+      })
+      .catch(error => {
+        console.error('Error removing stamp:', error);
+        Notiflix.Notify.failure('Imeshindwa kuondoa Muhuri');
+      });
+    }
+  );
+}
+
+// ============ Sahihi ya Afisa Mkopo (Item 2) ============
+let pendingSignatureDataUri = null;
+
+function handleSignatureFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  if (!file.type.startsWith('image/')) {
+    Notiflix.Notify.failure('Tafadhali chagua faili la picha (PNG au JPG)');
+    return;
+  }
+  
+  // Sahihi KAWAIDA ni PNG yenye "transparency" - background nyeupe isijazwe kwa lazima
+  const supportsTransparency = ['image/png', 'image/gif', 'image/webp'].includes(file.type);
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const maxDim = 300;
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > height) {
+        if (width > maxDim) {
+          height = Math.round(height * (maxDim / width));
+          width = maxDim;
+        }
+      } else {
+        if (height > maxDim) {
+          width = Math.round(width * (maxDim / height));
+          height = maxDim;
+        }
+      }
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!supportsTransparency) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      pendingSignatureDataUri = supportsTransparency
+        ? canvas.toDataURL('image/png')
+        : canvas.toDataURL('image/jpeg', 0.85);
+      
+      const previewImg = document.getElementById('signaturePreviewImg');
+      const noSignatureMsg = document.getElementById('signatureNoSignatureMsg');
+      previewImg.src = pendingSignatureDataUri;
+      previewImg.style.display = 'block';
+      if (noSignatureMsg) noSignatureMsg.style.display = 'none';
+    };
+    img.onerror = function() {
+      Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo. Jaribu picha nyingine.');
+    };
+    img.src = e.target.result;
+  };
+  reader.onerror = function() {
+    Notiflix.Notify.failure('Imeshindwa kusoma faili hiyo');
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveLoanOfficerSignature() {
+  const existingSrc = document.getElementById('signaturePreviewImg').src;
+  const signatureToSave = pendingSignatureDataUri || (existingSrc && existingSrc.startsWith('data:') ? existingSrc : null);
+  
+  if (!signatureToSave) {
+    Notiflix.Notify.failure('Tafadhali chagua picha kwanza');
+    return;
+  }
+  
+  const size = document.getElementById('signatureSizeInput').value;
+  
+  Notiflix.Loading.standard('Inahifadhi Sahihi...');
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'updateLoanOfficerSignature',
+      dbId: currentDbId,
+      signature: signatureToSave,
+      size: size
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    Notiflix.Loading.remove();
+    if (data.status === 'success') {
+      showQuickNotification('Sahihi imehifadhiwa kikamilifu');
+      document.getElementById('removeSignatureBtn').style.display = 'block';
+      pendingSignatureDataUri = null;
+    } else {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kuhifadhi Sahihi');
+    }
+  })
+  .catch(error => {
+    Notiflix.Loading.remove();
+    console.error('Error saving signature:', error);
+    Notiflix.Notify.failure('Imeshindwa kuhifadhi Sahihi');
+  });
+}
+
+function removeLoanOfficerSignature() {
+  Notiflix.Confirm.show(
+    'Ondoa Sahihi',
+    'Una uhakika unataka kuondoa Sahihi ya Afisa Mkopo?',
+    'Ndio, Ondoa',
+    'Hapana',
+    function() {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'deleteLoanOfficerSignature', dbId: currentDbId })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          pendingSignatureDataUri = null;
+          const previewImg = document.getElementById('signaturePreviewImg');
+          previewImg.style.display = 'none';
+          previewImg.src = '';
+          const noSignatureMsg = document.getElementById('signatureNoSignatureMsg');
+          if (noSignatureMsg) noSignatureMsg.style.display = 'block';
+          document.getElementById('removeSignatureBtn').style.display = 'none';
+          document.getElementById('signatureFileInput').value = '';
+          showQuickNotification('Sahihi imeondolewa');
+        } else {
+          Notiflix.Notify.failure(data.message || 'Imeshindwa kuondoa Sahihi');
+        }
+      })
+      .catch(error => {
+        console.error('Error removing signature:', error);
+        Notiflix.Notify.failure('Imeshindwa kuondoa Sahihi');
+      });
+    }
+  );
 }
     
     function selectTimeUnit(unit) {
@@ -9492,6 +10211,82 @@ function loadSettings() {
       document.getElementById('settingCurrency').value = data.settings['Currency'] || 'TZS';
       document.getElementById('settingMinAmount').value = data.settings['Minimum Amount for Active Status'] || '0';
       
+      // Logo ya Shirika/Kikundi (Item 1/2/3) - inatumika kwa akaunti zote
+      const existingLogo = data.settings['Organization Logo'] || '';
+      const logoPreviewImg = document.getElementById('logoPreviewImg');
+      const logoNoLogoMsg = document.getElementById('logoNoLogoMsg');
+      const removeLogoBtn = document.getElementById('removeLogoBtn');
+      if (existingLogo) {
+        logoPreviewImg.src = existingLogo;
+        logoPreviewImg.style.display = 'block';
+        if (logoNoLogoMsg) logoNoLogoMsg.style.display = 'none';
+        if (removeLogoBtn) removeLogoBtn.style.display = 'block';
+      } else {
+        logoPreviewImg.style.display = 'none';
+        if (logoNoLogoMsg) logoNoLogoMsg.style.display = 'block';
+        if (removeLogoBtn) removeLogoBtn.style.display = 'none';
+      }
+      document.getElementById('logoPositionSelect').value = data.settings['Logo Position'] || 'left';
+      const logoSizeVal = data.settings['Logo Size'] || '55';
+      document.getElementById('logoSizeInput').value = logoSizeVal;
+      document.getElementById('logoSizeValue').textContent = logoSizeVal;
+      let logoDocsList = [];
+      try {
+        logoDocsList = JSON.parse(data.settings['Logo Documents'] || '["form","contract","report"]');
+      } catch (e) {
+        logoDocsList = ['form', 'contract', 'report'];
+      }
+      document.getElementById('logoDocForm').checked = logoDocsList.includes('form');
+      document.getElementById('logoDocContract').checked = logoDocsList.includes('contract');
+      document.getElementById('logoDocReport').checked = logoDocsList.includes('report');
+      
+      // Muhuri wa Shirika/Kikundi (Item 1/2/3)
+      const existingStamp = data.settings['Organization Stamp'] || '';
+      const stampPreviewImg = document.getElementById('stampPreviewImg');
+      const stampNoStampMsg = document.getElementById('stampNoStampMsg');
+      const removeStampBtn = document.getElementById('removeStampBtn');
+      if (existingStamp) {
+        stampPreviewImg.src = existingStamp;
+        stampPreviewImg.style.display = 'block';
+        if (stampNoStampMsg) stampNoStampMsg.style.display = 'none';
+        if (removeStampBtn) removeStampBtn.style.display = 'block';
+      } else {
+        stampPreviewImg.style.display = 'none';
+        if (stampNoStampMsg) stampNoStampMsg.style.display = 'block';
+        if (removeStampBtn) removeStampBtn.style.display = 'none';
+      }
+      const stampSizeVal = data.settings['Stamp Size'] || '60';
+      document.getElementById('stampSizeInput').value = stampSizeVal;
+      document.getElementById('stampSizeValue').textContent = stampSizeVal;
+      let stampDocsList = [];
+      try {
+        stampDocsList = JSON.parse(data.settings['Stamp Documents'] || '["form","contract","report"]');
+      } catch (e) {
+        stampDocsList = ['form', 'contract', 'report'];
+      }
+      document.getElementById('stampDocForm').checked = stampDocsList.includes('form');
+      document.getElementById('stampDocContract').checked = stampDocsList.includes('contract');
+      document.getElementById('stampDocReport').checked = stampDocsList.includes('report');
+      
+      // Sahihi ya Afisa Mkopo (Item 2)
+      const existingSignature = data.settings['Loan Officer Signature'] || '';
+      const signaturePreviewImg = document.getElementById('signaturePreviewImg');
+      const signatureNoSignatureMsg = document.getElementById('signatureNoSignatureMsg');
+      const removeSignatureBtn = document.getElementById('removeSignatureBtn');
+      if (existingSignature) {
+        signaturePreviewImg.src = existingSignature;
+        signaturePreviewImg.style.display = 'block';
+        if (signatureNoSignatureMsg) signatureNoSignatureMsg.style.display = 'none';
+        if (removeSignatureBtn) removeSignatureBtn.style.display = 'block';
+      } else {
+        signaturePreviewImg.style.display = 'none';
+        if (signatureNoSignatureMsg) signatureNoSignatureMsg.style.display = 'block';
+        if (removeSignatureBtn) removeSignatureBtn.style.display = 'none';
+      }
+      const signatureSizeVal = data.settings['Signature Size'] || '60';
+      document.getElementById('signatureSizeInput').value = signatureSizeVal;
+      document.getElementById('signatureSizeValue').textContent = signatureSizeVal;
+      
       // Savings Group (Akiba, Hisa na Mikopo) settings
       const savingsSection = document.getElementById('savingsGroupSettingsSection');
       if (savingsSection) {
@@ -9504,6 +10299,18 @@ function loadSettings() {
           document.getElementById('settingLoanTermUnit').value = data.settings['Loan Term Unit'] || 'Mwezi';
           document.getElementById('settingLatePenaltyPercent').value = data.settings['Late Payment Penalty Percent'] || '0';
           document.getElementById('settingMembershipFee').value = data.settings['Membership Fee'] || '0';
+          
+          const useDurationBased = (data.settings['Loan Interest Mode'] || 'normal') === 'duration_based';
+          document.getElementById('settingUseDurationBasedInterest').checked = useDurationBased;
+          try {
+            durationRatesState = JSON.parse(data.settings['Loan Interest Duration Rates'] || '[]');
+          } catch (e) {
+            durationRatesState = [];
+          }
+          cachedLoanInterestMode = useDurationBased ? 'duration_based' : 'normal';
+          cachedLoanInterestDurationRates = durationRatesState;
+          renderDurationRatesTable();
+          toggleDurationRatesSection();
           
           let allocationGroups = [];
           try {
@@ -9933,6 +10740,7 @@ function saveSavingsGroupSettings() {
   const loanTermUnit = document.getElementById('settingLoanTermUnit').value || 'Mwezi';
   const latePenaltyPercent = document.getElementById('settingLatePenaltyPercent').value || '0';
   const membershipFee = document.getElementById('settingMembershipFee').value || '0';
+  const loanInterestMode = document.getElementById('settingUseDurationBasedInterest').checked ? 'duration_based' : 'normal';
   
   const loadingEl = document.getElementById('saveSavingsGroupSettingsLoading');
   if (loadingEl) loadingEl.style.display = 'block';
@@ -9947,7 +10755,8 @@ function saveSavingsGroupSettings() {
         'Interest Rate': interestRate,
         'Loan Term Unit': loanTermUnit,
         'Late Payment Penalty Percent': latePenaltyPercent,
-        'Membership Fee': membershipFee
+        'Membership Fee': membershipFee,
+        'Loan Interest Mode': loanInterestMode
       }
     })
   })
@@ -9955,6 +10764,7 @@ function saveSavingsGroupSettings() {
   .then(data => {
     if (loadingEl) loadingEl.style.display = 'none';
     if (data.status === 'success') {
+      cachedLoanInterestMode = loanInterestMode;
       showQuickNotification('Mipangilio imehifadhiwa');
     } else {
       Notiflix.Notify.failure(data.message || 'Imeshindwa kuhifadhi');
@@ -9967,10 +10777,161 @@ function saveSavingsGroupSettings() {
   });
 }
 
+// ============ Viwango vya Riba kwa Muda wa Mkopo (Settings) ============
+// Badilisha kati ya tabu za Mipangilio ya Akiba, Hisa na Mikopo (Item 3)
+function switchSettingsTab(tab) {
+  const tabs = ['general', 'interest', 'fines', 'allocation', 'categories'];
+  tabs.forEach(t => {
+    const btn = document.getElementById('settingsTabBtn_' + t);
+    const pane = document.getElementById('settingsTabPane_' + t);
+    if (t === tab) {
+      if (btn) btn.classList.add('active');
+      if (pane) pane.classList.add('active');
+    } else {
+      if (btn) btn.classList.remove('active');
+      if (pane) pane.classList.remove('active');
+    }
+  });
+}
+
+function toggleDurationRatesSection() {
+  const checkbox = document.getElementById('settingUseDurationBasedInterest');
+  const section = document.getElementById('durationRatesTableSection');
+  if (!checkbox || !section) return;
+  
+  if (checkbox.checked) {
+    section.style.display = 'block';
+    section.classList.remove('hidden');
+  } else {
+    section.style.display = 'none';
+    section.classList.add('hidden');
+  }
+}
+
+function renderDurationRatesTable() {
+  const container = document.getElementById('durationRatesTable');
+  if (!container) return;
+  
+  const existingEmptyMsg = document.getElementById('durationRatesEmptyMsg');
+  if (existingEmptyMsg) existingEmptyMsg.remove();
+  
+  if (durationRatesState.length === 0) {
+    container.innerHTML = '';
+    container.insertAdjacentHTML('afterend', '<p id="durationRatesEmptyMsg" style="color: #999; font-size: 13px; margin-bottom: 15px;">Hakuna kiwango bado. Ongeza kimoja hapa chini.</p>');
+    return;
+  }
+  
+  const rows = durationRatesState.map((r, index) => {
+    const rate = parseFloat(r.rate) || 0;
+    const multiplier = (1 + (rate / 100)).toFixed(2);
+    return `
+      <tr>
+        <td><input type="number" min="1" step="1" value="${r.fromMonth != null ? r.fromMonth : ''}" style="width: 90px;" oninput="updateDurationRateField(${index}, 'fromMonth', this.value)"></td>
+        <td><input type="number" min="1" step="1" value="${r.toMonth != null ? r.toMonth : ''}" style="width: 90px;" oninput="updateDurationRateField(${index}, 'toMonth', this.value)"></td>
+        <td><input type="number" min="0" step="0.01" inputmode="decimal" value="${r.rate != null ? r.rate : ''}" style="width: 90px;" oninput="updateDurationRateField(${index}, 'rate', this.value)"></td>
+        <td><span id="durationRateMultiplier_${index}" style="font-weight: 700; color: #1a5276;">${multiplier}</span></td>
+        <td>
+          <button type="button" class="btn btn-sm btn-danger" onclick="removeDurationRateRow(${index})" title="Ondoa">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  container.innerHTML = `
+    <thead>
+      <tr>
+        <th>Kuanzia Miezi</th>
+        <th>Hadi Miezi</th>
+        <th>Riba (%)</th>
+        <th>Multiplier</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  `;
+}
+
+function updateDurationRateField(index, field, value) {
+  if (durationRatesState[index]) {
+    durationRatesState[index][field] = value === '' ? null : parseFloat(value);
+    if (field === 'rate') {
+      // Sasisha Multiplier YA MSTARI HUU TU (bila kufanya "re-render" ya jedwali zima) -
+      // "re-render" nzima ilikuwa ikiondoa "focus" kwenye input, ikisababisha keyboard
+      // ya simu kufunga kila herufi/tarakimu moja ikiandikwa (Item 2/3)
+      const rate = durationRatesState[index].rate || 0;
+      const multiplierEl = document.getElementById('durationRateMultiplier_' + index);
+      if (multiplierEl) {
+        multiplierEl.textContent = (1 + (rate / 100)).toFixed(2);
+      }
+    }
+  }
+}
+
+function addDurationRateRow() {
+  durationRatesState.push({fromMonth: null, toMonth: null, rate: null});
+  renderDurationRatesTable();
+}
+
+function removeDurationRateRow(index) {
+  durationRatesState.splice(index, 1);
+  renderDurationRatesTable();
+}
+
+function saveDurationRates() {
+  for (let i = 0; i < durationRatesState.length; i++) {
+    const r = durationRatesState[i];
+    if (r.fromMonth == null || r.fromMonth < 1) {
+      Notiflix.Notify.failure(`Mstari ${i + 1}: Kuanzia Miezi lazima iwe angalau 1`);
+      return;
+    }
+    if (r.toMonth == null || r.toMonth < r.fromMonth) {
+      Notiflix.Notify.failure(`Mstari ${i + 1}: Hadi Miezi haiwezi kuwa chini ya Kuanzia Miezi`);
+      return;
+    }
+    if (r.rate == null || r.rate < 0) {
+      Notiflix.Notify.failure(`Mstari ${i + 1}: Riba (%) lazima iwe sifuri au zaidi`);
+      return;
+    }
+  }
+  
+  Notiflix.Loading.standard('Inahifadhi...');
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'saveLoanInterestDurationRates',
+      dbId: currentDbId,
+      rates: durationRatesState
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    Notiflix.Loading.remove();
+    if (data.status === 'success') {
+      durationRatesState = data.rates || durationRatesState;
+      cachedLoanInterestDurationRates = durationRatesState;
+      renderDurationRatesTable();
+      showQuickNotification(data.message || 'Viwango vimehifadhiwa kikamilifu');
+    } else {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kuhifadhi viwango');
+    }
+  })
+  .catch(error => {
+    Notiflix.Loading.remove();
+    console.error('Error saving duration rates:', error);
+    Notiflix.Notify.failure('Imeshindwa kuhifadhi viwango');
+  });
+}
+
 // ============ Mikopo (Loans) Dashboard ============
 
 let cachedInterestRate = 0;
 let cachedLoanTermUnit = 'Mwezi';
+let cachedLoanInterestMode = 'normal';
+let cachedLoanInterestDurationRates = [];
+let durationRatesState = [];
 
 let cachedFundBalances = {};
 
@@ -10314,7 +11275,7 @@ function resetLoanDocumentTemplates() {
 }
 
 function loadLoansDashboard() {
-  // Pata asilimia ya riba, muda wa mkopo, na kipimo chake - kwa ajili ya preview
+  // Pata asilimia ya riba, muda wa mkopo, kipimo chake, na mfumo wa riba - kwa ajili ya preview
   fetch(SCRIPT_URL, {
     method: 'POST',
     body: JSON.stringify({ action: 'getSystemSettings', dbId: currentDbId })
@@ -10324,6 +11285,12 @@ function loadLoansDashboard() {
     if (data.status === 'success') {
       cachedInterestRate = parseFloat(data.settings['Interest Rate']) || 0;
       cachedLoanTermUnit = data.settings['Loan Term Unit'] || 'Mwezi';
+      cachedLoanInterestMode = (data.settings['Loan Interest Mode'] || 'normal') === 'duration_based' ? 'duration_based' : 'normal';
+      try {
+        cachedLoanInterestDurationRates = JSON.parse(data.settings['Loan Interest Duration Rates'] || '[]');
+      } catch (e) {
+        cachedLoanInterestDurationRates = [];
+      }
       updateLoanPreview();
     }
   })
@@ -10419,25 +11386,39 @@ function toggleLoanDocBorrowerFields() {
 function updateLoanDocPreview() {
   const principal = parseFloat(document.getElementById('loanDocAmount').value) || 0;
   const monthsInput = parseFloat(document.getElementById('loanDocRepaymentPeriod').value) || 0;
-  const periods = cachedLoanTermUnit === 'Mwaka' ? (monthsInput / 12) : monthsInput;
-  const interest = principal * (cachedInterestRate / 100) * periods;
-  const total = principal + interest;
-  const unitLabel = cachedLoanTermUnit === 'Mwaka' ? 'mwaka' : 'mwezi';
   
-  document.getElementById('loanDocPreviewRate').textContent = monthsInput > 0
-    ? `${cachedInterestRate}% x ${periods.toFixed(2)} ${unitLabel}`
-    : `${cachedInterestRate}%`;
-  document.getElementById('loanDocPreviewInterest').textContent = formatCurrency(interest);
-  document.getElementById('loanDocPreviewTotal').textContent = formatCurrency(total);
-  
+  const rateEl = document.getElementById('loanDocPreviewRate');
+  const interestEl = document.getElementById('loanDocPreviewInterest');
+  const totalEl = document.getElementById('loanDocPreviewTotal');
   const dueDateEl = document.getElementById('loanDocPreviewDueDate');
-  if (monthsInput > 0) {
-    const calculatedDate = new Date();
-    calculatedDate.setMonth(calculatedDate.getMonth() + monthsInput);
-    dueDateEl.textContent = calculatedDate.toLocaleDateString('sw-TZ');
-  } else {
+  
+  if (monthsInput <= 0) {
+    rateEl.textContent = cachedLoanInterestMode === 'duration_based' ? '-' : `${cachedInterestRate}%`;
+    interestEl.textContent = formatCurrency(0);
+    totalEl.textContent = formatCurrency(0);
     dueDateEl.textContent = '-';
+    return;
   }
+  
+  const calc = calculateLoanInterestClientSide(principal, monthsInput);
+  if (calc.error) {
+    rateEl.textContent = 'Hakuna Kiwango';
+    interestEl.textContent = '-';
+    totalEl.textContent = '-';
+  } else if (calc.mode === 'duration_based') {
+    rateEl.textContent = `${calc.rate}% (Multiplier ${calc.multiplier.toFixed(2)})`;
+    interestEl.textContent = formatCurrency(calc.interestAmount);
+    totalEl.textContent = formatCurrency(calc.totalToPay);
+  } else {
+    const unitLabel = cachedLoanTermUnit === 'Mwaka' ? 'mwaka' : 'mwezi';
+    rateEl.textContent = `${calc.rate}% x ${calc.periods.toFixed(2)} ${unitLabel}`;
+    interestEl.textContent = formatCurrency(calc.interestAmount);
+    totalEl.textContent = formatCurrency(calc.totalToPay);
+  }
+  
+  const calculatedDate = new Date();
+  calculatedDate.setMonth(calculatedDate.getMonth() + monthsInput);
+  dueDateEl.textContent = calculatedDate.toLocaleDateString('sw-TZ');
 }
 
 // Pakua Fomu ya Maombi ya Mkopo au Mkataba wa Mkopo (PDF), ikiwa imejazwa jina la
@@ -10456,6 +11437,12 @@ function downloadLoanDocument(docType) {
   }
   if (!repaymentPeriod || parseFloat(repaymentPeriod) <= 0) {
     Notiflix.Notify.failure('Tafadhali weka Idadi ya Miezi ya Marejesho');
+    return;
+  }
+  
+  const docCalcCheck = calculateLoanInterestClientSide(parseFloat(loanAmount), parseFloat(repaymentPeriod));
+  if (docCalcCheck.error) {
+    Notiflix.Notify.failure(docCalcCheck.error);
     return;
   }
   if (!loanPurpose) {
@@ -10583,28 +11570,87 @@ function updateExpenseSourceFundBalance() {
   label.innerHTML = `<i class="fas fa-info-circle"></i> Kiasi kinachopatikana kwenye ${fund}: <strong style="color: #16a085;">${formatCurrency(balance)}</strong>`;
 }
 
+// ============================================================
+// FUNCTION KUU YA KUHESABU RIBA (Frontend) - INAFANANA KABISA na _calculateLoanInterest()
+// ya backend, ili Preview isionekane tofauti na kiasi kitakachohifadhiwa database
+// (Item 6/10). Hii NDIYO PEKEE inayotumika kwa Loan Preview na Fomu/Mkataba Preview.
+// ============================================================
+function calculateLoanInterestClientSide(principal, loanTermMonths) {
+  if (cachedLoanInterestMode === 'duration_based') {
+    const matchedRange = cachedLoanInterestDurationRates.find(r =>
+      loanTermMonths >= parseFloat(r.fromMonth) && loanTermMonths <= parseFloat(r.toMonth)
+    );
+    
+    if (!matchedRange) {
+      return { error: 'Hakuna kiwango cha riba kilichowekwa kwa muda huu wa mkopo.' };
+    }
+    
+    const rate = parseFloat(matchedRange.rate) || 0;
+    const multiplier = 1 + (rate / 100);
+    const totalToPay = principal * multiplier;
+    const interestAmount = totalToPay - principal;
+    
+    return {
+      mode: 'duration_based',
+      rate: rate,
+      multiplier: multiplier,
+      periods: null,
+      interestAmount: interestAmount,
+      totalToPay: totalToPay
+    };
+  }
+  
+  // "normal" (Riba ya Kawaida) - mfumo wa awali, HAIJABADILIKA
+  const periods = cachedLoanTermUnit === 'Mwaka' ? (loanTermMonths / 12) : loanTermMonths;
+  const interestAmount = principal * (cachedInterestRate / 100) * periods;
+  const totalToPay = principal + interestAmount;
+  
+  return {
+    mode: 'normal',
+    rate: cachedInterestRate,
+    multiplier: null,
+    periods: periods,
+    interestAmount: interestAmount,
+    totalToPay: totalToPay
+  };
+}
+
 function updateLoanPreview() {
   const principal = parseFloat(document.getElementById('loanPrincipalAmount').value) || 0;
   const monthsInput = parseFloat(document.getElementById('loanTermMonthsInput').value) || 0;
-  const periods = cachedLoanTermUnit === 'Mwaka' ? (monthsInput / 12) : monthsInput;
-  const interest = principal * (cachedInterestRate / 100) * periods;
-  const total = principal + interest;
-  const unitLabel = cachedLoanTermUnit === 'Mwaka' ? 'mwaka' : 'mwezi';
   
-  document.getElementById('loanPreviewRate').textContent = monthsInput > 0
-    ? `${cachedInterestRate}% x ${periods.toFixed(2)} ${unitLabel}`
-    : `${cachedInterestRate}%`;
-  document.getElementById('loanPreviewInterest').textContent = formatCurrency(interest);
-  document.getElementById('loanPreviewTotal').textContent = formatCurrency(total);
-  
+  const rateEl = document.getElementById('loanPreviewRate');
+  const interestEl = document.getElementById('loanPreviewInterest');
+  const totalEl = document.getElementById('loanPreviewTotal');
   const dueDateEl = document.getElementById('loanPreviewDueDate');
-  if (monthsInput > 0) {
-    const calculatedDate = new Date();
-    calculatedDate.setMonth(calculatedDate.getMonth() + monthsInput);
-    dueDateEl.textContent = calculatedDate.toLocaleDateString('sw-TZ');
-  } else {
+  
+  if (monthsInput <= 0) {
+    rateEl.textContent = cachedLoanInterestMode === 'duration_based' ? '-' : `${cachedInterestRate}%`;
+    interestEl.textContent = formatCurrency(0);
+    totalEl.textContent = formatCurrency(0);
     dueDateEl.textContent = '-';
+    return;
   }
+  
+  const calc = calculateLoanInterestClientSide(principal, monthsInput);
+  if (calc.error) {
+    rateEl.textContent = 'Hakuna Kiwango';
+    interestEl.textContent = '-';
+    totalEl.textContent = '-';
+  } else if (calc.mode === 'duration_based') {
+    rateEl.textContent = `${calc.rate}% (Multiplier ${calc.multiplier.toFixed(2)})`;
+    interestEl.textContent = formatCurrency(calc.interestAmount);
+    totalEl.textContent = formatCurrency(calc.totalToPay);
+  } else {
+    const unitLabel = cachedLoanTermUnit === 'Mwaka' ? 'mwaka' : 'mwezi';
+    rateEl.textContent = `${calc.rate}% x ${calc.periods.toFixed(2)} ${unitLabel}`;
+    interestEl.textContent = formatCurrency(calc.interestAmount);
+    totalEl.textContent = formatCurrency(calc.totalToPay);
+  }
+  
+  const calculatedDate = new Date();
+  calculatedDate.setMonth(calculatedDate.getMonth() + monthsInput);
+  dueDateEl.textContent = calculatedDate.toLocaleDateString('sw-TZ');
 }
 
 function submitDisburseLoan() {
@@ -10639,9 +11685,17 @@ function submitDisburseLoan() {
   
   const memberSelect = document.getElementById('loanMemberSelect');
   const memberLabel = memberSelect.selectedIndex >= 0 ? memberSelect.options[memberSelect.selectedIndex].textContent : '';
-  const confirmPeriods = cachedLoanTermUnit === 'Mwaka' ? (parseFloat(loanTermMonths) / 12) : parseFloat(loanTermMonths);
-  const interest = parseFloat(principalAmount) * (cachedInterestRate / 100) * confirmPeriods;
-  const total = parseFloat(principalAmount) + interest;
+  
+  const calc = calculateLoanInterestClientSide(parseFloat(principalAmount), parseFloat(loanTermMonths));
+  if (calc.error) {
+    Notiflix.Notify.failure(calc.error);
+    return;
+  }
+  const interest = calc.interestAmount;
+  const total = calc.totalToPay;
+  const rateLabel = calc.mode === 'duration_based'
+    ? `${calc.rate}% (Multiplier ${calc.multiplier.toFixed(2)})`
+    : `${calc.rate}% x ${calc.periods.toFixed(2)}`;
   
   const calculatedDate = new Date();
   calculatedDate.setMonth(calculatedDate.getMonth() + parseFloat(loanTermMonths));
@@ -10669,7 +11723,7 @@ function submitDisburseLoan() {
           <span style="font-weight:600;">${sourceFund}</span>
         </div>
         <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px dashed #e0e0e0;">
-          <span style="color:#666;"><i class="fas fa-percentage"></i> Riba (${cachedInterestRate}% x ${confirmPeriods.toFixed(2)})</span>
+          <span style="color:#666;"><i class="fas fa-percentage"></i> Riba (${rateLabel})</span>
           <span style="font-weight:600;">${formatCurrency(interest)}</span>
         </div>
         <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px dashed #e0e0e0;">
