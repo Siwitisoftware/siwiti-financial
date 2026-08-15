@@ -21,6 +21,12 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Font Awesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- PDF.js kwa ajili ya kuonesha Fomu/Mkataba (PDF) ndani ya ukurasa moja kwa moja -
+       inachora kila ukurasa kwenye "canvas" badala ya kutegemea "plugin" ya PDF ya
+       kivinjari (isiyoaminika kwenye Chrome ya Android) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- SheetJS kwa ajili ya kutengeneza/kusoma Excel (.xlsx) - Kiolezo cha Wanachama -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
   <style>
 
@@ -2145,32 +2151,11 @@ tr:hover {
         <p>Jumla ya Wanachama</p>
       </div>
     </div>
-    <div class="stat-card active-members">
-      <div class="stat-icon"><i class="fas fa-piggy-bank"></i></div>
-      <div class="stat-info">
-        <h3 id="savTotalSavings">0 TZS</h3>
-        <p>Akiba</p>
-      </div>
-    </div>
-    <div class="stat-card balance">
-      <div class="stat-icon"><i class="fas fa-chart-pie"></i></div>
-      <div class="stat-info">
-        <h3 id="savTotalShares">0 TZS</h3>
-        <p>Hisa</p>
-      </div>
-    </div>
     <div class="stat-card income">
       <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
       <div class="stat-info">
         <h3 id="savTotalLoanedOut">0 TZS</h3>
-        <p>Mkopo Kilichokopeshwa (Kinachozunguka)</p>
-      </div>
-    </div>
-    <div class="stat-card income">
-      <div class="stat-icon"><i class="fas fa-percentage"></i></div>
-      <div class="stat-info">
-        <h3 id="savInterestCollected">0 TZS</h3>
-        <p>Faida Iliyotokana na Mkopo (Riba Iliyokusanywa)</p>
+        <p>Mkopo Uliokopeshwa (Unaozunguka)</p>
       </div>
     </div>
     <div class="stat-card expense">
@@ -2178,13 +2163,6 @@ tr:hover {
       <div class="stat-info">
         <h3 id="savExpectedInterest">0 TZS</h3>
         <p>Faida Inayotarajiwa (Mikopo Inayozunguka)</p>
-      </div>
-    </div>
-    <div class="stat-card inactive-members">
-      <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
-      <div class="stat-info">
-        <h3 id="savFinesCollected">0 TZS</h3>
-        <p>Faini Iliyokusanywa</p>
       </div>
     </div>
     <div class="stat-card balance">
@@ -2556,6 +2534,13 @@ tr:hover {
   <button class="btn btn-success" onclick="showAddMemberForm()">
     <i class="fas fa-user-plus"></i> Ongeza Mwanachama
   </button>
+  <button class="btn btn-secondary" onclick="downloadMemberTemplate()">
+    <i class="fas fa-file-excel"></i> Pakua Kiolezo
+  </button>
+  <button class="btn btn-secondary" onclick="document.getElementById('memberTemplateUploadInput').click()">
+    <i class="fas fa-file-upload"></i> Pakia Kiolezo
+  </button>
+  <input type="file" id="memberTemplateUploadInput" accept=".xlsx,.xls" style="display:none;" onchange="handleMemberTemplateUpload(event)">
   <button class="btn btn-primary" onclick="loadMembers()">
     <i class="fas fa-sync-alt"></i> Sasisha
   </button>
@@ -2572,6 +2557,29 @@ tr:hover {
               <button class="btn btn-warning" onclick="hideAddMemberForm()">
                 <i class="fas fa-times"></i> Funga
               </button>
+            </div>
+            
+            <div class="input-group">
+              <label><i class="fas fa-camera"></i> Picha ya Wasifu <span style="color:#999;">(hiari)</span></label>
+              <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+                <div id="memberPhotoPreviewWrap" style="width:80px; height:80px; border-radius:50%; overflow:hidden; background:#f0f2f5; display:flex; align-items:center; justify-content:center; border:2px solid #d5dbe0; flex-shrink:0;">
+                  <i class="fas fa-user" id="memberPhotoPlaceholderIcon" style="font-size:32px; color:#b0b8c1;"></i>
+                  <img id="memberPhotoPreviewImg" style="display:none; width:100%; height:100%; object-fit:cover;">
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('memberPhotoUploadInput').click()">
+                    <i class="fas fa-image"></i> Pakia Picha
+                  </button>
+                  <button type="button" class="btn btn-sm btn-secondary" onclick="triggerCameraCapture('add')">
+                    <i class="fas fa-camera"></i> Piga Picha
+                  </button>
+                  <button type="button" class="btn btn-sm btn-danger hidden" id="memberPhotoRemoveBtn" onclick="removeMemberPhotoPreview()">
+                    <i class="fas fa-trash"></i> Ondoa
+                  </button>
+                </div>
+              </div>
+              <input type="file" id="memberPhotoUploadInput" accept="image/*" style="display:none;" onchange="handleMemberPhotoSelect(event, 'add')">
+              <input type="file" id="memberPhotoCaptureInput" accept="image/*" capture="environment" style="display:none;" onchange="handleMemberPhotoSelect(event, 'add')">
             </div>
             
             <div class="form-row">
@@ -2607,6 +2615,11 @@ tr:hover {
               <textarea id="memberAddress" rows="2" placeholder="Weka anwani kamili"></textarea>
             </div>
             
+            <div class="input-group">
+              <label for="memberNidaNumber"><i class="fas fa-id-card"></i> Namba ya NIDA <span style="color:#999;">(hiari)</span></label>
+              <input type="text" id="memberNidaNumber" placeholder="XXXXXXXX-XXXXX-XXXXX-XX" oninput="formatNidaInputLive(this)" maxlength="23">
+            </div>
+            
             <button class="btn btn-success" onclick="registerMember()">
               <i class="fas fa-save"></i> Hifadhi Mwanachama
             </button>
@@ -2635,11 +2648,13 @@ tr:hover {
             <table id="membersTable">
               <thead>
                 <tr>
+                  <th>Picha</th>
                   <th>ID</th>
                   <th>Jina</th>
                   <th>Barua Pepe</th>
                   <th>Simu</th>
                   <th>Anwani</th>
+                  <th>NIDA</th>
                   <th>Hali</th>
                   <th>Tarehe ya Kujiunga</th>
                   <th>Vitendo</th>
@@ -2912,12 +2927,15 @@ tr:hover {
             </div>
           </div>
           
-          <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
             <button type="button" class="btn btn-success" id="loansTabDisburseBtn" onclick="switchLoansTab('disburse')">
               <i class="fas fa-hand-holding-usd"></i> TOA MKOPO
             </button>
             <button type="button" class="btn btn-secondary" id="loansTabDocsBtn" onclick="switchLoansTab('docs')">
               <i class="fas fa-file-contract"></i> FOMU NA MKATABA
+            </button>
+            <button type="button" class="btn btn-secondary" id="loansTabInfoBtn" onclick="switchLoansTab('info')">
+              <i class="fas fa-users"></i> TAARIFA ZA MIKOPO
             </button>
           </div>
           
@@ -2953,14 +2971,14 @@ tr:hover {
             
             <div class="input-group">
               <label for="loanMemberSelect"><i class="fas fa-user"></i> Mwanachama</label>
-              <select id="loanMemberSelect">
+              <select id="loanMemberSelect" onchange="updateMemberFundContribution()">
                 <option value="">-- Chagua Mwanachama --</option>
               </select>
             </div>
             
             <div class="input-group">
               <label for="loanSourceFund"><i class="fas fa-piggy-bank"></i> Mfuko wa Kukopesha</label>
-              <select id="loanSourceFund" onchange="updateLoanSourceFundBalance()">
+              <select id="loanSourceFund" onchange="updateLoanSourceFundBalance(); updateMemberFundContribution();">
                 <option value="">-- Chagua Mfuko --</option>
                 <option value="Akiba">Akiba</option>
                 <option value="Hisa">Hisa</option>
@@ -2969,6 +2987,7 @@ tr:hover {
                 <option value="Riba ya Mkopo">Riba ya Mkopo</option>
               </select>
               <small id="loanSourceFundBalance" style="color: #666; display: block; margin-top: 5px;"></small>
+              <small id="memberFundContribution" style="color: #1a5276; font-weight: 600; display: none; margin-top: 3px;"></small>
             </div>
             
             <div class="input-group">
@@ -2987,6 +3006,18 @@ tr:hover {
             <div class="input-group">
               <label for="loanNotes"><i class="fas fa-sticky-note"></i> Maelezo (hiari)</label>
               <input type="text" id="loanNotes" placeholder="maelezo zaidi...">
+            </div>
+            
+            <div class="input-group">
+              <label for="loanApplicationFormUpload"><i class="fas fa-file-pdf"></i> Pakia Fomu ya Maombi ya Mkopo (PDF, hiari)</label>
+              <input type="file" id="loanApplicationFormUpload" accept="application/pdf" onchange="handleLoanDocumentUpload(event, 'applicationForm')">
+              <small id="loanApplicationFormStatus" style="color: #666; display: block; margin-top: 5px;"></small>
+            </div>
+            
+            <div class="input-group">
+              <label for="loanContractUpload"><i class="fas fa-file-pdf"></i> Pakia Mkataba wa Mkopo (PDF, hiari)</label>
+              <input type="file" id="loanContractUpload" accept="application/pdf" onchange="handleLoanDocumentUpload(event, 'contract')">
+              <small id="loanContractStatus" style="color: #666; display: block; margin-top: 5px;"></small>
             </div>
             
             <div id="loanPreviewBox" style="background: #f8fafc; border: 1px solid #eef2f6; border-radius: 10px; padding: 14px; margin-bottom: 15px; font-size: 13.5px;">
@@ -3011,11 +3042,14 @@ tr:hover {
                     <th>Mwanachama</th>
                     <th>Mfuko</th>
                     <th>Mtaji</th>
+                    <th>MUDA</th>
                     <th>Riba</th>
-                    <th>Jumla</th>
-                    <th>Kimelipwa</th>
                     <th>Ongezeko</th>
+                    <th>JUMLA</th>
+                    <th>IMELIPWA</th>
                     <th>Salio</th>
+                    <th>Tarehe ya Mkopo</th>
+                    <th>Tarehe ya Kurejesha</th>
                     <th>Hali</th>
                     <th>Vitendo</th>
                   </tr>
@@ -3066,7 +3100,7 @@ tr:hover {
                 </div>
                 <div class="input-group">
                   <label for="loanDocBorrowerIdNumber"><i class="fas fa-id-card"></i> Namba ya Kitambulisho (NIDA) <span style="color:#999;">(hiari)</span></label>
-                  <input type="text" id="loanDocBorrowerIdNumber" placeholder="hiari">
+                  <input type="text" id="loanDocBorrowerIdNumber" placeholder="XXXXXXXX-XXXXX-XXXXX-XX" oninput="formatNidaInputLive(this)" maxlength="23">
                 </div>
               </div>
               <div class="input-group">
@@ -3199,6 +3233,19 @@ tr:hover {
             </div>
           </div>
           
+          </div>
+          
+          <!-- TAARIFA ZA MIKOPO - Item 3: Taarifa za Wakopaji wote pamoja na Fomu/Mkataba
+               waliopakiwa. Bonyeza jina la mkopaji kufungua taarifa zake kamili. -->
+          <div class="hidden" id="loansTabInfo">
+            <div class="chart-container" style="margin-top: 20px;">
+              <h4><i class="fas fa-users"></i> Taarifa za Wakopaji</h4>
+              <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+                Bonyeza jina la mkopaji ili kuona taarifa zake kamili, pamoja na Fomu ya
+                Maombi na Mkataba wa Mkopo (endapo vilipakiwa wakati wa kutoa mkopo).
+              </p>
+              <div id="loanBorrowersList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
           </div>
         </div>
         
@@ -3695,12 +3742,31 @@ tr:hover {
         Category mpya utakayoongeza hapa itapata Mfuko wake wenyewe kwenye "Gundua" kiotomatiki,
         na itaonekana pia kwenye fomu ya Miamala (Mapato).
       </p>
-      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+      <div style="display: flex; gap: 10px; margin-bottom: 10px;">
         <input type="text" id="newCategoryNameInput" placeholder="mfano: Mfuko wa Dharura" style="flex: 1;">
-        <button class="btn btn-primary" onclick="addCustomCategory()">
-          <i class="fas fa-plus"></i> Ongeza
+      </div>
+      <div class="input-group" style="margin-bottom: 15px;">
+        <label><i class="fas fa-icons"></i> Icon ya Category (hiari)</label>
+        <div id="newCategoryIconDisplay" onclick="toggleIconPicker('new')" style="border:1px solid #d5dbe0; border-radius:8px; padding:10px 12px; cursor:pointer; display:flex; align-items:center; gap:10px; background:#fff;">
+          <i class="fas fa-folder-open" id="newCategoryIconPreview" style="font-size:18px; color:#3498db; width:22px; text-align:center;"></i>
+          <span id="newCategoryIconLabel" style="color:#666; font-size:13px;">Default (fa-folder-open)</span>
+          <i class="fas fa-chevron-down" style="margin-left:auto; color:#999; font-size:12px;"></i>
+        </div>
+        <div id="newCategoryIconPicker" class="hidden" style="border:1px solid #eef2f6; border-radius:8px; margin-top:6px; max-height:220px; overflow-y:auto; display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; padding:10px; background:#f8fafc;"></div>
+        <input type="hidden" id="newCategoryIconInput" value="">
+        <button class="btn btn-primary" onclick="addCustomCategory()" style="margin-top:10px; width:100%;">
+          <i class="fas fa-plus"></i> Ongeza Category
         </button>
       </div>
+      
+      <h6 style="margin: 15px 0 8px; color: #555;"><i class="fas fa-list"></i> Categories za Mapato Zilizopo</h6>
+      <p style="font-size: 12px; color: #888; margin-bottom: 10px;">
+        Weka tick "Gundua" ili Category ionekane kama kadi kwenye Gundua. Category yoyote
+        inaweza kuondolewa - Mfuko wake (Salio na historia yake) hautaguswa kabisa,
+        itaacha tu kuonekana kwenye orodha ya kuchagua muamala mpya. Bonyeza jina la
+        Category kuhariri.
+      </p>
+      <div id="incomeCategoriesList" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px;"></div>
       
       <hr style="margin: 20px 0; border: none; border-top: 1px solid #eef2f6;">
       
@@ -3714,6 +3780,28 @@ tr:hover {
         <button class="btn btn-primary" onclick="addCustomExpenseCategoryUI()">
           <i class="fas fa-plus"></i> Ongeza
         </button>
+      </div>
+      
+      <h6 style="margin: 15px 0 8px; color: #555;"><i class="fas fa-list"></i> Categories za Matumizi Zilizopo</h6>
+      <p style="font-size: 12px; color: #888; margin-bottom: 10px;">
+        Category yoyote inaweza kuondolewa kwenye orodha ya kuchagua muamala mpya.
+      </p>
+      <div id="expenseCategoriesList" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px;"></div>
+      
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid #eef2f6;">
+      
+      <h5 style="margin-bottom: 8px;"><i class="fas fa-percentage"></i> Mfuko wa Riba ya Mkopo</h5>
+      <p style="font-size: 12px; color: #888; margin-bottom: 12px;">
+        Huu ndiyo Mfuko WA PEKEE wa "msingi" unaobaki - unatozwa moja kwa moja na
+        mfumo kila mkopo unapolipwa (Riba na Ongezeko), hivyo hauwezi kuondolewa
+        wala kugawanyika. Hata hivyo, unaweza kuhariri jina na icon yake hapa.
+      </p>
+      <div id="interestFundDisplay" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; background:#f8fafc; border-radius:8px; cursor:pointer;" onclick="editInterestFundUI()">
+        <span style="font-weight:600; display:flex; align-items:center; gap:8px;">
+          <i class="fas fa-percentage" id="interestFundIconDisplay" style="color:#3498db; width:18px; text-align:center;"></i>
+          <span id="interestFundNameDisplay">Riba ya Mkopo</span>
+          <i class="fas fa-pen" style="font-size:10px; color:#bbb;"></i>
+        </span>
       </div>
     </div>
   </div>
@@ -4025,7 +4113,7 @@ tr:hover {
 
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyr3D6kKgBoJlnDwb9NqLhHHPy4CdvEh7bgKTuYWOlBs8-YjtjlROYXnvRh8RbL2GB/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx79cIAey1mJUf8cFkTe_2CdERyQcYLJ_7b_05elOHdUY69TFR5zqGKhfFMN15Mkp8/exec";
     let currentDbId = null;
     let currentOrganization = '';
     let currentUserEmail = '';
@@ -5010,6 +5098,14 @@ function showDashboard(dashboard) {
     closeMemberAccountView();
   }
   
+  // Simamisha "live timer" ya Mikopo endapo mtumiaji anaondoka kwenye dashibodi hiyo
+  // (Item 1/2) - inazuia matumizi yasiyo ya lazima ya rasilimali ukiwa kwenye ukurasa
+  // mwingine
+  if (dashboard !== 'loans' && loansLiveCounterInterval) {
+    clearInterval(loansLiveCounterInterval);
+    loansLiveCounterInterval = null;
+  }
+  
   // Kumbuka dashibodi iliyochaguliwa ili ibaki hivyo hata baada ya refresh
   // (mtumiaji ndiye pekee anayeweza kubadilisha - siyo refresh)
   if (dashboard !== 'memberAccountView' && dashboard !== 'accountTypeChange') {
@@ -5761,7 +5857,370 @@ function updateRecentTransactionsTable(transactions) {
     
     // ============ MEMBERS DASHBOARD ============
     
-    function showAddMemberForm() {
+    // Item 1: Kiolezo cha Excel kwa ajili ya kujaza taarifa za Wanachama nje ya mfumo
+// Item 1/2: Tengeneza "workbook" ya kiolezo (muundo na fomati - Item 2), inatumika
+// na Website NA App - tofauti ipo tu kwenye jinsi ya "kupakua" baadaye
+function _buildMemberTemplateWorkbook() {
+  const orgName = (currentOrganization || 'Kikundi').toString().toUpperCase();
+  const headers = ['Jina Kamili (LAZIMA)', 'Barua Pepe', 'Simu', 'Anwani', 'NIDA', 'Hali'];
+  const BLANK_DATA_ROWS = 25; // mistari tupu yenye mipaka kwa ajili ya kujaza (muundo wa "fomu")
+  
+  // Item 3: HAKUNA mfano wa data - maelezo yote yapo kwenye "headers" pekee
+  const wsData = [
+    [orgName],
+    ['FOMU YA USAJILI WA WANACHAMA'],
+    []
+  ];
+  wsData.push(headers);
+  for (let r = 0; r < BLANK_DATA_ROWS; r++) {
+    wsData.push(['', '', '', '', '', '']);
+  }
+  
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }
+  ];
+  
+  ws['!cols'] = [{ wch: 28 }, { wch: 26 }, { wch: 16 }, { wch: 22 }, { wch: 26 }, { wch: 12 }];
+  ws['!rows'] = [{ hpt: 30 }, { hpt: 22 }, { hpt: 8 }, { hpt: 22 }];
+  
+  // Item 2: Fonti na rangi TOFAUTI kwa kila sehemu -
+  // (a) Jina la Kikundi: kubwa zaidi, "navy blue", bold
+  if (ws['A1']) ws['A1'].s = {
+    font: { bold: true, sz: 18, color: { rgb: '1A5276' }, name: 'Calibri' },
+    alignment: { horizontal: 'center', vertical: 'center' }
+  };
+  // (b) Kichwa cha Fomu: rangi ya dhahabu/kahawia, saizi ya kati
+  if (ws['A2']) ws['A2'].s = {
+    font: { bold: true, sz: 13, italic: true, color: { rgb: 'B7950B' }, name: 'Calibri' },
+    alignment: { horizontal: 'center', vertical: 'center' }
+  };
+  
+  // (c) "Headers" za Column: mandharinyuma ya "teal" iliyokoza, maandishi meupe
+  headers.forEach((h, idx) => {
+    const cellRef = XLSX.utils.encode_cell({ r: 3, c: idx });
+    if (ws[cellRef]) {
+      ws[cellRef].s = {
+        font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
+        fill: { fgColor: { rgb: '117864' } },
+        alignment: { horizontal: 'center', vertical: 'center' },
+        border: {
+          top: { style: 'thin', color: { rgb: 'FFFFFF' } },
+          bottom: { style: 'thin', color: { rgb: 'FFFFFF' } },
+          left: { style: 'thin', color: { rgb: 'FFFFFF' } },
+          right: { style: 'thin', color: { rgb: 'FFFFFF' } }
+        }
+      };
+    }
+  });
+  
+  // (d) Data (mistari tupu ya kujaza): saizi ndogo zaidi ya "headers", na mipaka
+  // nyepesi inayoonesha muundo wa "jedwali" tayari kwa kujaza, ikiwa na mistari
+  // inayopishana rangi kidogo (kwa urahisi wa kusoma) - Item 2/3
+  for (let r = 0; r < BLANK_DATA_ROWS; r++) {
+    const rowIdx = 4 + r;
+    const isEven = r % 2 === 0;
+    for (let c = 0; c < headers.length; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r: rowIdx, c: c });
+      if (!ws[cellRef]) ws[cellRef] = { t: 's', v: '' };
+      ws[cellRef].s = {
+        font: { sz: 10.5, color: { rgb: '2C3E50' }, name: 'Calibri' },
+        fill: { fgColor: { rgb: isEven ? 'FFFFFF' : 'F4F6F7' } },
+        border: {
+          top: { style: 'thin', color: { rgb: 'D5D8DC' } },
+          bottom: { style: 'thin', color: { rgb: 'D5D8DC' } },
+          left: { style: 'thin', color: { rgb: 'D5D8DC' } },
+          right: { style: 'thin', color: { rgb: 'D5D8DC' } }
+        }
+      };
+    }
+  }
+  
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Wanachama');
+  
+  return wb;
+}
+
+// ============ Kiolezo: Website ya kawaida ============
+// Website inaweza kupakua faili moja kwa moja kwenye kivinjari (blob) bila
+// kuhitaji Google Drive kabisa.
+function downloadMemberTemplate() {
+  Notiflix.Loading.standard('Inatengeneza kiolezo...');
+  
+  // "setTimeout" ndogo inatoa nafasi kwa "loading" ionekane kabla ya kazi ya
+  // kutengeneza/kupakua kuanza (Item 1 - sawa na uzoefu wa App)
+  setTimeout(() => {
+    try {
+      const wb = _buildMemberTemplateWorkbook();
+      XLSX.writeFile(wb, 'Kiolezo_cha_Wanachama.xlsx', { cellStyles: true });
+    } catch (err) {
+      console.error('Error generating template:', err);
+      Notiflix.Notify.failure('Imeshindwa kutengeneza kiolezo');
+    } finally {
+      Notiflix.Loading.remove();
+    }
+  }, 100);
+}
+
+function handleMemberTemplateUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      
+      // Tafuta mstari halisi wa "headers" (wenye "Jina" kwenye column ya kwanza) -
+      // hii inafanya usomaji kuwa sahihi hata kama kiolezo kina heading za ziada
+      // juu yake (Jina la Kikundi, Kichwa cha Fomu - Item 1), au kiolezo cha zamani
+      // kisicho na heading hizo
+      let headerRowIndex = -1;
+      for (let hi = 0; hi < rows.length; hi++) {
+        const firstCell = (rows[hi][0] || '').toString().toLowerCase();
+        if (firstCell.indexOf('jina') !== -1) {
+          headerRowIndex = hi;
+          break;
+        }
+      }
+      
+      if (headerRowIndex === -1) {
+        Notiflix.Notify.failure('Kiolezo hakiendani na muundo unaotarajiwa. Tafadhali pakua Kiolezo kipya na ujaze humo.');
+        event.target.value = '';
+        return;
+      }
+      
+      const dataRows = rows.slice(headerRowIndex + 1);
+      
+      if (dataRows.length === 0) {
+        Notiflix.Notify.failure('Kiolezo hakina data yoyote ya kujaza');
+        event.target.value = '';
+        return;
+      }
+      
+      // Item 1: hakiki kila mstari wenye data una Jina Kamili - endapo mstari hata
+      // mmoja haujajazwa Jina, GOMA KUPAKIA KIOLEZO CHOTE na toa maelekezo wazi
+      const missingNameRows = [];
+      dataRows.forEach((row, idx) => {
+        const name = (row[0] || '').toString().trim();
+        const hasAnyData = row.some(cell => (cell || '').toString().trim() !== '');
+        if (hasAnyData && !name) {
+          missingNameRows.push(headerRowIndex + idx + 2); // namba halisi ya mstari kwenye Excel (1-indexed)
+        }
+      });
+      
+      if (missingNameRows.length > 0) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Jina Halijajazwa',
+          html: `Mstari namba <strong>${missingNameRows.join(', ')}</strong> kwenye kiolezo ${missingNameRows.length > 1 ? 'hazina' : 'haina'} Jina Kamili.<br><br>
+                 <strong>Jina Kamili ni LAZIMA</strong> kwa kila mwanachama - tafadhali jaza sehemu hiyo kwa mistari yote yenye taarifa, kisha jaribu kupakia tena.`,
+          confirmButtonText: 'Nimeelewa'
+        });
+        event.target.value = '';
+        return;
+      }
+      
+      const members = dataRows
+        .filter(row => row.some(cell => (cell || '').toString().trim() !== ''))
+        .map(row => ({
+          fullName: (row[0] || '').toString().trim(),
+          email: (row[1] || '').toString().trim(),
+          phone: (row[2] || '').toString().trim(),
+          address: (row[3] || '').toString().trim(),
+          nidaNumber: (row[4] || '').toString().trim(),
+          status: (row[5] || '').toString().trim() || 'Active'
+        }));
+      
+      if (members.length === 0) {
+        Notiflix.Notify.failure('Hakuna wanachama wa kupakia - kiolezo hakina data');
+        event.target.value = '';
+        return;
+      }
+      
+      // Item 2: ujumbe sahihi wa kisarufi kulingana na idadi (mmoja/wengi)
+      const confirmMessage = members.length === 1
+        ? `Kuna mwanachama 1 kwenye kiolezo. Unataka kumsajili?`
+        : `Kuna wanachama ${members.length} kwenye kiolezo. Unataka kuwasajili wote?`;
+      
+      Notiflix.Confirm.show(
+        'Thibitisha Upakiaji',
+        confirmMessage,
+        'Ndio, Sajili',
+        'Hapana',
+        function() {
+          Notiflix.Loading.standard(members.length === 1 ? 'Inasajili mwanachama...' : 'Inasajili wanachama...');
+          
+          fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'bulkRegisterMembers',
+              dbId: currentDbId,
+              members: members
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            Notiflix.Loading.remove();
+            if (data.status === 'success') {
+              let msg = `Wanachama ${data.registeredCount} wamesajiliwa kikamilifu`;
+              if (data.skippedCount > 0) {
+                msg += `. Mistari ${data.skippedCount} iliruka kwa sababu ya makosa.`;
+              }
+              showQuickNotification(msg);
+              if (data.warnings && data.warnings.length > 0) {
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'Baadhi ya Mistari Iliruka',
+                  html: data.warnings.map(w => `<div style="text-align:left; font-size:13px;">${w}</div>`).join(''),
+                  confirmButtonText: 'Sawa'
+                });
+              }
+              loadMembers();
+            } else {
+              Notiflix.Notify.failure(data.message || 'Imeshindwa kupakia wanachama');
+            }
+          })
+          .catch(error => {
+            Notiflix.Loading.remove();
+            console.error('Error bulk registering members:', error);
+            Notiflix.Notify.failure('Imeshindwa kupakia wanachama');
+          });
+        }
+      );
+      
+      event.target.value = '';
+    } catch (err) {
+      console.error('Error parsing xlsx file:', err);
+      Notiflix.Notify.failure('Imeshindwa kusoma faili hilo. Hakikisha ni faili la Excel (.xlsx) sahihi.');
+      event.target.value = '';
+    }
+  };
+  reader.onerror = function() {
+    Notiflix.Notify.failure('Imeshindwa kusoma faili');
+    event.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// Item 2: Picha ya Wasifu ya Mwanachama - kupakia kutoka "gallery" au kupiga moja
+// kwa moja. Picha inapunguzwa ukubwa (canvas) na kuhakikiwa isizidi kikomo cha
+// "cell" ya Google Sheets, sawa na Logo/Muhuri/Sahihi.
+//
+// ============ Kamera: Website ya kawaida ============
+// Kwenye Website (kivinjari cha kawaida cha simu/kompyuta), "capture" attribute ya
+// <input type="file"> inafanya kazi vizuri kabisa (inafungua kamera halisi moja
+// kwa moja) - hivyo hapa tunatumia mbinu rahisi zaidi: "input" iliyofichwa yenye
+// "capture", inayobofywa na kitufe kimoja cha "Piga Picha". Mtumiaji anabadilisha
+// kamera (mbele/nyuma) ndani ya App ya Kamera yenyewe baada ya kufunguka.
+function triggerCameraCapture(context) {
+  const inputId = context === 'edit' ? 'editMemberPhotoCaptureInput' : 'memberPhotoCaptureInput';
+  const input = document.getElementById(inputId);
+  if (input) input.click();
+}
+
+let pendingMemberPhotoDataUri = null;
+let editMemberPhotoState = null;
+
+function handleMemberPhotoSelect(event, context) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  if (!file.type.startsWith('image/')) {
+    Notiflix.Notify.failure('Tafadhali chagua picha (JPEG/PNG)');
+    event.target.value = '';
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      // Punguza picha kwenda vipimo vinavyofaa kwa "picha ya wasifu" (mraba, hadi
+      // 400px) kwa kutumia "canvas", kisha "compress" kama JPEG
+      const MAX_DIM = 400;
+      let { width, height } = img;
+      if (width > height) {
+        if (width > MAX_DIM) { height = Math.round(height * (MAX_DIM / width)); width = MAX_DIM; }
+      } else {
+        if (height > MAX_DIM) { width = Math.round(width * (MAX_DIM / height)); height = MAX_DIM; }
+      }
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      let dataUri = canvas.toDataURL('image/jpeg', 0.85);
+      // Hakikisha haizidi kikomo cha "cell" ya Google Sheets (herufi 50,000) -
+      // function hii tayari ipo (inatumika na Logo/Muhuri/Sahihi)
+      dataUri = shrinkDataUriUnderCellLimit(canvas, false, dataUri);
+      
+      if (context === 'edit') {
+        editMemberPhotoState = dataUri;
+      } else {
+        pendingMemberPhotoDataUri = dataUri;
+      }
+      
+      const previewImg = context === 'edit' ? document.getElementById('editMemberPhotoPreviewImg') : document.getElementById('memberPhotoPreviewImg');
+      const placeholderIcon = context === 'edit' ? document.getElementById('editMemberPhotoPlaceholderIcon') : document.getElementById('memberPhotoPlaceholderIcon');
+      const removeBtn = context === 'edit' ? document.getElementById('editMemberPhotoRemoveBtn') : document.getElementById('memberPhotoRemoveBtn');
+      
+      if (previewImg) {
+        previewImg.src = dataUri;
+        previewImg.style.display = 'block';
+      }
+      if (placeholderIcon) placeholderIcon.style.display = 'none';
+      if (removeBtn) removeBtn.classList.remove('hidden');
+    };
+    img.onerror = function() {
+      Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo');
+    };
+    img.src = e.target.result;
+  };
+  reader.onerror = function() {
+    Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo');
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function removeMemberPhotoPreview() {
+  pendingMemberPhotoDataUri = '';
+  const previewImg = document.getElementById('memberPhotoPreviewImg');
+  const placeholderIcon = document.getElementById('memberPhotoPlaceholderIcon');
+  const removeBtn = document.getElementById('memberPhotoRemoveBtn');
+  if (previewImg) { previewImg.style.display = 'none'; previewImg.src = ''; }
+  if (placeholderIcon) placeholderIcon.style.display = 'block';
+  if (removeBtn) removeBtn.classList.add('hidden');
+}
+
+function removeEditMemberPhotoPreview() {
+  editMemberPhotoState = '';
+  const previewImg = document.getElementById('editMemberPhotoPreviewImg');
+  const placeholderIcon = document.getElementById('editMemberPhotoPlaceholderIcon');
+  const removeBtn = document.getElementById('editMemberPhotoRemoveBtn');
+  if (previewImg) { previewImg.style.display = 'none'; previewImg.src = ''; }
+  if (placeholderIcon) placeholderIcon.style.display = 'block';
+  if (removeBtn) removeBtn.classList.add('hidden');
+}
+
+function resetMemberPhotoForm() {
+  pendingMemberPhotoDataUri = null;
+  removeMemberPhotoPreview();
+}
+
+function showAddMemberForm() {
       document.getElementById('addMemberForm').classList.remove('hidden');
     }
     
@@ -5776,15 +6235,42 @@ function updateRecentTransactionsTable(transactions) {
       document.getElementById('memberPhone').value = '';
       document.getElementById('memberAddress').value = '';
       document.getElementById('memberStatus').value = 'Active';
+      document.getElementById('memberNidaNumber').value = '';
+      resetMemberPhotoForm();
+    }
+    
+    // ============ Namba ya NIDA - Muundo Sahihi (Item 5) ============
+    // Muundo: XXXXXXXX-XXXXX-XXXXX-XX (tarakimu 20, zikipangwa kwa mistari kiotomatiki
+    // wakati mtumiaji anaandika)
+    function formatNidaInputLive(inputEl) {
+      const digitsOnly = inputEl.value.replace(/\D/g, '').slice(0, 20);
+      let formatted = '';
+      if (digitsOnly.length > 0) formatted += digitsOnly.slice(0, 8);
+      if (digitsOnly.length > 8) formatted += '-' + digitsOnly.slice(8, 13);
+      if (digitsOnly.length > 13) formatted += '-' + digitsOnly.slice(13, 18);
+      if (digitsOnly.length > 18) formatted += '-' + digitsOnly.slice(18, 20);
+      inputEl.value = formatted;
+    }
+    
+    function isValidNidaFormatClient(value) {
+      if (!value) return true; // hiari - tupu inakubalika
+      return /^\d{8}-\d{5}-\d{5}-\d{2}$/.test(value);
     }
     
     function registerMember() {
+      const nidaNumber = document.getElementById('memberNidaNumber').value.trim();
+      if (!isValidNidaFormatClient(nidaNumber)) {
+        Notiflix.Notify.failure('Namba ya NIDA siyo kamili. Muundo sahihi ni: XXXXXXXX-XXXXX-XXXXX-XX (tarakimu 20)');
+        return;
+      }
+      
       const memberData = {
         fullName: document.getElementById('memberFullName').value,
         email: document.getElementById('memberEmail').value,
         phone: document.getElementById('memberPhone').value,
         address: document.getElementById('memberAddress').value,
-        status: document.getElementById('memberStatus').value
+        status: document.getElementById('memberStatus').value,
+        nidaNumber: nidaNumber
       };
       
       if (!memberData.fullName) {
@@ -5799,7 +6285,8 @@ function updateRecentTransactionsTable(transactions) {
         body: JSON.stringify({
           action: 'registerMember',
           dbId: currentDbId,
-          memberData: memberData
+          memberData: memberData,
+          profilePicture: pendingMemberPhotoDataUri || ''
         })
       })
       .then(res => res.json())
@@ -5866,7 +6353,7 @@ function loadMembers() {
         const tbody = document.getElementById('membersTable').querySelector('tbody');
         tbody.innerHTML = `
           <tr>
-            <td colspan="8" style="text-align: center; padding: 20px; color: #666;">
+            <td colspan="10" style="text-align: center; padding: 20px; color: #666;">
               <i class="fas fa-exclamation-circle"></i> ${data.message || 'Imeshindwa kupakia wanachama'}
             </td>
           </tr>
@@ -5880,7 +6367,7 @@ function loadMembers() {
       const tbody = document.getElementById('membersTable').querySelector('tbody');
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" style="text-align: center; padding: 20px; color: #666;">
+          <td colspan="10" style="text-align: center; padding: 20px; color: #666;">
             <i class="fas fa-wifi-slash"></i> Hakuna muunganisho wa mtandao
           </td>
         </tr>
@@ -5935,6 +6422,8 @@ function hideOfflineBadge(tableId) {
     // ============ DELETE ALL MEMBERS FUNCTIONS ============
 
 function showDeleteAllMembersForm() {
+  Notiflix.Loading.standard('Inaangalia idadi ya wanachama...');
+  
   // First get current member count
   fetch(SCRIPT_URL, {
     method: 'POST',
@@ -5946,6 +6435,7 @@ function showDeleteAllMembersForm() {
   })
   .then(res => res.json())
   .then(data => {
+    Notiflix.Loading.remove();
     if (data.status === 'success') {
       const memberCount = data.total || 0;
       
@@ -6133,6 +6623,7 @@ function showDeleteAllMembersForm() {
     }
   })
   .catch(error => {
+    Notiflix.Loading.remove();
     Notiflix.Notify.failure('Hitilafu ya kupakia idadi ya wanachama: ' + error.message);
   });
 }
@@ -6153,12 +6644,19 @@ function updateMembersTable(members) {
         
         const statusClass = `status-${member.Status.toLowerCase()}`;
         
+        const photoUrl = member['Profile Picture'];
+        const photoCell = photoUrl
+          ? `<img src="${photoUrl}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; display:block;">`
+          : `<div style="width:38px; height:38px; border-radius:50%; background:#f0f2f5; display:flex; align-items:center; justify-content:center; color:#b0b8c1;"><i class="fas fa-user"></i></div>`;
+        
         row.innerHTML = `
+          <td>${photoCell}</td>
           <td><small title="${fullMemberId}">${shortMemberId}</small></td>
           <td>${member['Full Name']}</td>
           <td>${member.Email || '-'}</td>
           <td>${member.Phone || '-'}</td>
           <td>${member.Address || '-'}</td>
+          <td>${member['NIDA Number'] || '-'}</td>
           <td><span class="status-badge ${statusClass}">${member.Status}</span></td>
           <td>${joinDateStr}</td>
           <td>
@@ -6210,9 +6708,29 @@ function updateMembersTable(members) {
     }
     
     function showEditMemberForm(member) {
+  editMemberPhotoState = member['Profile Picture'] || '';
+  const hasPhoto = !!editMemberPhotoState;
+  
   Swal.fire({
     title: 'Hariri Mwanachama',
     html: `
+      <div class="input-group" style="margin-bottom: 15px; text-align:left;">
+        <label><i class="fas fa-camera"></i> Picha ya Wasifu</label>
+        <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap; margin-top:6px;">
+          <div id="editMemberPhotoPreviewWrap" style="width:70px; height:70px; border-radius:50%; overflow:hidden; background:#f0f2f5; display:flex; align-items:center; justify-content:center; border:2px solid #d5dbe0; flex-shrink:0;">
+            <i class="fas fa-user" id="editMemberPhotoPlaceholderIcon" style="font-size:28px; color:#b0b8c1; ${hasPhoto ? 'display:none;' : ''}"></i>
+            <img id="editMemberPhotoPreviewImg" src="${editMemberPhotoState}" style="${hasPhoto ? 'display:block;' : 'display:none;'} width:100%; height:100%; object-fit:cover;">
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('editMemberPhotoUploadInput').click()"><i class="fas fa-image"></i></button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="triggerCameraCapture('edit')"><i class="fas fa-camera"></i></button>
+            <button type="button" class="btn btn-sm btn-danger ${hasPhoto ? '' : 'hidden'}" id="editMemberPhotoRemoveBtn" onclick="removeEditMemberPhotoPreview()"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+        <input type="file" id="editMemberPhotoUploadInput" accept="image/*" style="display:none;" onchange="handleMemberPhotoSelect(event, 'edit')">
+        <input type="file" id="editMemberPhotoCaptureInput" accept="image/*" capture="environment" style="display:none;" onchange="handleMemberPhotoSelect(event, 'edit')">
+      </div>
+      
       <div class="input-group" style="margin-bottom: 15px;">
         <label for="editMemberFullName"><i class="fas fa-user"></i> Jina Kamili</label>
         <input type="text" id="editMemberFullName" value="${member['Full Name']}" class="swal2-input">
@@ -6234,6 +6752,11 @@ function updateMembersTable(members) {
       </div>
       
       <div class="input-group" style="margin-bottom: 15px;">
+        <label for="editMemberNida"><i class="fas fa-id-card"></i> Namba ya NIDA (hiari)</label>
+        <input type="text" id="editMemberNida" value="${member['NIDA Number'] || ''}" placeholder="XXXXXXXX-XXXXX-XXXXX-XX" maxlength="23" oninput="formatNidaInputLive(this)" class="swal2-input">
+      </div>
+      
+      <div class="input-group" style="margin-bottom: 15px;">
         <label for="editMemberStatus"><i class="fas fa-circle"></i> Hali</label>
         <select id="editMemberStatus" class="swal2-select">
           <option value="Active" ${member.Status === 'Active' ? 'selected' : ''}>Aktivu</option>
@@ -6248,12 +6771,19 @@ function updateMembersTable(members) {
     confirmButtonColor: '#3498db',
     cancelButtonColor: '#e74c3c',
     preConfirm: () => {
+      const editedNida = document.getElementById('editMemberNida').value.trim();
+      if (!isValidNidaFormatClient(editedNida)) {
+        Swal.showValidationMessage('Namba ya NIDA siyo kamili. Muundo sahihi ni: XXXXXXXX-XXXXX-XXXXX-XX (tarakimu 20)');
+        return false;
+      }
       const memberData = {
         'Full Name': document.getElementById('editMemberFullName').value,
         'Email': document.getElementById('editMemberEmail').value,
         'Phone': document.getElementById('editMemberPhone').value,
         'Address': document.getElementById('editMemberAddress').value,
-        'Status': document.getElementById('editMemberStatus').value
+        'NIDA Number': editedNida,
+        'Status': document.getElementById('editMemberStatus').value,
+        'Profile Picture': editMemberPhotoState || ''
       };
       
       if (!memberData['Full Name']) {
@@ -6450,14 +6980,19 @@ function updateMembersTable(members) {
       if (data.status === 'success') {
         cachedMembershipFee = parseFloat(data.settings['Membership Fee']) || 0;
         try {
-          customIncomeCategories = JSON.parse(data.settings['Custom Income Categories'] || '[]');
+          customIncomeCategories = _extractCategoryNames(JSON.parse(data.settings['Custom Income Categories'] || '[]'));
         } catch (e) {
           customIncomeCategories = [];
         }
         try {
-          customExpenseCategories = JSON.parse(data.settings['Custom Expense Categories'] || '[]');
+          customExpenseCategories = _extractCategoryNames(JSON.parse(data.settings['Custom Expense Categories'] || '[]'));
         } catch (e) {
           customExpenseCategories = [];
+        }
+        try {
+          removedBuiltinCategories = JSON.parse(data.settings['Removed Builtin Categories'] || '[]');
+        } catch (e) {
+          removedBuiltinCategories = [];
         }
         try {
           cachedFineTypes = JSON.parse(data.settings['Fine Types'] || '[]');
@@ -6751,6 +7286,9 @@ function updateSavingsCategoriesForType(type) {
   
   var options = type === 'Expense' ? SAVINGS_EXPENSE_CATEGORY_OPTIONS.slice() : SAVINGS_INCOME_CATEGORY_OPTIONS.slice();
   
+  // Item 1/4: ondoa Categories za mfumo ambazo mtumiaji ameziondoa kwenye Mipangilio
+  options = options.filter(function(c) { return removedBuiltinCategories.indexOf(c[0]) === -1; });
+  
   // Ongeza Categories za ziada alizoongeza mtumiaji
   if (type === 'Expense') {
     customExpenseCategories.forEach(function(cat) {
@@ -6777,6 +7315,7 @@ function updateSavingsCategoriesForType(type) {
 // Kiasi cha Ada ya Uanachama kinajazwa kiotomatiki kutoka Mipangilio
 let cachedMembershipFee = 0;
 let cachedFineTypes = [];
+let removedBuiltinCategories = [];
 
 function onTransactionCategoryChange() {
   if (currentAccountType !== 'savings_group') return;
@@ -8751,6 +9290,93 @@ function fetchLatestMinimumAmount() {
 // ============ Logo ya Shirika/Kikundi (Item 1/2/3) ============
 let pendingLogoDataUri = null;
 
+// Inaondoa background ya picha KIOTOMATIKI (mfano background nyeusi ya JPG - JPG haiwezi
+// kuwa na "transparency" kabisa, hivyo hii ndiyo njia pekee ya kuiondoa). Inatambua rangi
+// ya background kwa kusoma pembeni nne za picha, kisha inafanya "transparent" kila pixel
+// inayofanana na rangi hiyo (bila kugusa "ink" halisi ya Sahihi/Muhuri). Inatumika TU
+// kwa picha zisizo na "transparency" asili (JPG) - PNG/GIF/WebP zenye transparency
+// halisi hazigusiwi kabisa, ili zisije kuharibiwa kwa bahati mbaya.
+// Google Sheets ina kikomo cha herufi 50,000 kwa "cell" moja. Endapo picha
+// iliyopakiwa (Logo/Muhuri/Sahihi) itazidi kikomo hicho, punguza ukubwa wake
+// KIOTOMATIKI (kwanza "quality" ya JPEG, kisha vipimo/dimensions) mpaka itoshee -
+// bila kuhitaji mtumiaji kufanya lolote mwenyewe.
+function shrinkDataUriUnderCellLimit(sourceCanvas, isTransparent, currentDataUri) {
+  const MAX_CHARS = 49000; // pungufu kidogo ya 50,000 kwa usalama wa ziada
+  
+  if (currentDataUri.length <= MAX_CHARS) {
+    return currentDataUri;
+  }
+  
+  let workCanvas = sourceCanvas;
+  let quality = 0.85;
+  let dataUri = currentDataUri;
+  let safetyCounter = 0;
+  
+  while (dataUri.length > MAX_CHARS && safetyCounter < 25) {
+    safetyCounter++;
+    
+    if (!isTransparent && quality > 0.3) {
+      // JPEG: punguza "quality" kwanza (haibadilishi ukubwa wa picha inavyoonekana)
+      quality = Math.max(0.3, quality - 0.1);
+    } else {
+      // PNG (au JPEG iliyoshafikia "quality" ya chini kabisa): punguza vipimo
+      const newWidth = Math.max(20, Math.round(workCanvas.width * 0.85));
+      const newHeight = Math.max(20, Math.round(workCanvas.height * 0.85));
+      const smallerCanvas = document.createElement('canvas');
+      smallerCanvas.width = newWidth;
+      smallerCanvas.height = newHeight;
+      const ctx = smallerCanvas.getContext('2d');
+      if (!isTransparent) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, newWidth, newHeight);
+      }
+      ctx.drawImage(workCanvas, 0, 0, newWidth, newHeight);
+      workCanvas = smallerCanvas;
+    }
+    
+    dataUri = isTransparent
+      ? workCanvas.toDataURL('image/png')
+      : workCanvas.toDataURL('image/jpeg', quality);
+  }
+  
+  return dataUri;
+}
+
+function autoRemoveSolidBackground(canvas) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  if (w === 0 || h === 0) return;
+  
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const data = imageData.data;
+  
+  const corners = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]];
+  let bgR = 0, bgG = 0, bgB = 0;
+  corners.forEach(([x, y]) => {
+    const idx = (y * w + x) * 4;
+    bgR += data[idx];
+    bgG += data[idx + 1];
+    bgB += data[idx + 2];
+  });
+  bgR = Math.round(bgR / 4);
+  bgG = Math.round(bgG / 4);
+  bgB = Math.round(bgB / 4);
+  
+  const threshold = 60;
+  for (let i = 0; i < data.length; i += 4) {
+    const dr = data[i] - bgR;
+    const dg = data[i + 1] - bgG;
+    const db = data[i + 2] - bgB;
+    const distance = Math.sqrt(dr * dr + dg * dg + db * db);
+    if (distance < threshold) {
+      data[i + 3] = 0;
+    }
+  }
+  
+  ctx.putImageData(imageData, 0, 0);
+}
+
 // Inasoma picha aliyochagua mtumiaji, inaipunguza saizi (max 300px) na kuibadilisha
 // kuwa JPEG yenye ukubwa mdogo (base64), ili ihifadhike vizuri kwenye Settings bila
 // kuzidisha kikomo cha "cell" ya Google Sheets
@@ -8802,6 +9428,10 @@ function handleLogoFileSelect(event) {
       pendingLogoDataUri = supportsTransparency
         ? canvas.toDataURL('image/png')
         : canvas.toDataURL('image/jpeg', 0.85);
+      
+      // Item 1: ikiwa picha bado inazidi kikomo cha "cell" ya Google Sheets (herufi
+      // 50,000), punguza ukubwa wake kiotomatiki mpaka itoshee
+      pendingLogoDataUri = shrinkDataUriUnderCellLimit(canvas, supportsTransparency, pendingLogoDataUri);
       
       const previewImg = document.getElementById('logoPreviewImg');
       const noLogoMsg = document.getElementById('logoNoLogoMsg');
@@ -8882,12 +9512,15 @@ function removeOrganizationLogo() {
     'Ndio, Ondoa',
     'Hapana',
     function() {
+      Notiflix.Loading.standard('Inaondoa...');
+      
       fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'deleteOrganizationLogo', dbId: currentDbId })
       })
       .then(res => res.json())
       .then(data => {
+        Notiflix.Loading.remove();
         if (data.status === 'success') {
           pendingLogoDataUri = null;
           const previewImg = document.getElementById('logoPreviewImg');
@@ -8903,6 +9536,7 @@ function removeOrganizationLogo() {
         }
       })
       .catch(error => {
+        Notiflix.Loading.remove();
         console.error('Error removing logo:', error);
         Notiflix.Notify.failure('Imeshindwa kuondoa Logo');
       });
@@ -8951,15 +9585,17 @@ function handleStampFileSelect(event) {
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
-      if (!supportsTransparency) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, width, height);
-      }
       ctx.drawImage(img, 0, 0, width, height);
+      if (!supportsTransparency) {
+        // JPG haina "transparency" asili - ondoa background yake KIOTOMATIKI
+        autoRemoveSolidBackground(canvas);
+      }
       
-      pendingStampDataUri = supportsTransparency
-        ? canvas.toDataURL('image/png')
-        : canvas.toDataURL('image/jpeg', 0.85);
+      pendingStampDataUri = canvas.toDataURL('image/png');
+      
+      // Item 1: ikiwa picha bado inazidi kikomo cha "cell" ya Google Sheets (herufi
+      // 50,000), punguza ukubwa wake kiotomatiki mpaka itoshee
+      pendingStampDataUri = shrinkDataUriUnderCellLimit(canvas, true, pendingStampDataUri);
       
       const previewImg = document.getElementById('stampPreviewImg');
       const noStampMsg = document.getElementById('stampNoStampMsg');
@@ -9034,12 +9670,15 @@ function removeOrganizationStamp() {
     'Ndio, Ondoa',
     'Hapana',
     function() {
+      Notiflix.Loading.standard('Inaondoa...');
+      
       fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'deleteOrganizationStamp', dbId: currentDbId })
       })
       .then(res => res.json())
       .then(data => {
+        Notiflix.Loading.remove();
         if (data.status === 'success') {
           pendingStampDataUri = null;
           const previewImg = document.getElementById('stampPreviewImg');
@@ -9055,6 +9694,7 @@ function removeOrganizationStamp() {
         }
       })
       .catch(error => {
+        Notiflix.Loading.remove();
         console.error('Error removing stamp:', error);
         Notiflix.Notify.failure('Imeshindwa kuondoa Muhuri');
       });
@@ -9101,15 +9741,18 @@ function handleSignatureFileSelect(event) {
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
-      if (!supportsTransparency) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, width, height);
-      }
       ctx.drawImage(img, 0, 0, width, height);
+      if (!supportsTransparency) {
+        // JPG haina "transparency" asili - ondoa background yake KIOTOMATIKI (mfano
+        // background nyeusi kwenye Sahihi) badala ya kuijaza rangi nyeupe
+        autoRemoveSolidBackground(canvas);
+      }
       
-      pendingSignatureDataUri = supportsTransparency
-        ? canvas.toDataURL('image/png')
-        : canvas.toDataURL('image/jpeg', 0.85);
+      pendingSignatureDataUri = canvas.toDataURL('image/png');
+      
+      // Item 1: ikiwa picha bado inazidi kikomo cha "cell" ya Google Sheets (herufi
+      // 50,000), punguza ukubwa wake kiotomatiki mpaka itoshee
+      pendingSignatureDataUri = shrinkDataUriUnderCellLimit(canvas, true, pendingSignatureDataUri);
       
       const previewImg = document.getElementById('signaturePreviewImg');
       const noSignatureMsg = document.getElementById('signatureNoSignatureMsg');
@@ -9175,12 +9818,15 @@ function removeLoanOfficerSignature() {
     'Ndio, Ondoa',
     'Hapana',
     function() {
+      Notiflix.Loading.standard('Inaondoa...');
+      
       fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'deleteLoanOfficerSignature', dbId: currentDbId })
       })
       .then(res => res.json())
       .then(data => {
+        Notiflix.Loading.remove();
         if (data.status === 'success') {
           pendingSignatureDataUri = null;
           const previewImg = document.getElementById('signaturePreviewImg');
@@ -9196,6 +9842,7 @@ function removeLoanOfficerSignature() {
         }
       })
       .catch(error => {
+        Notiflix.Loading.remove();
         console.error('Error removing signature:', error);
         Notiflix.Notify.failure('Imeshindwa kuondoa Sahihi');
       });
@@ -10321,14 +10968,19 @@ function loadSettings() {
           renderAllocationGroups(allocationGroups);
           
           try {
-            customIncomeCategories = JSON.parse(data.settings['Custom Income Categories'] || '[]');
+            customIncomeCategories = _extractCategoryNames(JSON.parse(data.settings['Custom Income Categories'] || '[]'));
           } catch (e) {
             customIncomeCategories = [];
           }
           try {
-            customExpenseCategories = JSON.parse(data.settings['Custom Expense Categories'] || '[]');
+            customExpenseCategories = _extractCategoryNames(JSON.parse(data.settings['Custom Expense Categories'] || '[]'));
           } catch (e) {
             customExpenseCategories = [];
+          }
+          try {
+            removedBuiltinCategories = JSON.parse(data.settings['Removed Builtin Categories'] || '[]');
+          } catch (e) {
+            removedBuiltinCategories = [];
           }
           try {
             cachedFineTypes = JSON.parse(data.settings['Fine Types'] || '[]');
@@ -10430,11 +11082,107 @@ const ALLOCATION_FUND_OPTIONS = ["Akiba", "Hisa", "Faini", "Ada ya Uanachama", "
 let allocationGroupsState = [];
 
 const SAVINGS_INCOME_CATEGORIES = ["Mchango wa Mwanachama", "Ada ya Uanachama", "Mengineyo"];
+// Inasoma orodha ya Category (kutoka Mipangilio) ikiwa ni muundo wa ZAMANI (strings
+// tu) au MPYA ({name, showOnDiscover}) - inarudisha majina (strings) pekee kwa ajili
+// ya dropdown za fomu, bila kujali muundo halisi ulioko Database
+function _extractCategoryNames(rawList) {
+  if (!Array.isArray(rawList)) return [];
+  return rawList.map(function(item) {
+    return typeof item === 'string' ? item : item.name;
+  });
+}
+
 let customIncomeCategories = [];
+
+// ============ Icon Picker kwa Categories (Item 3) ============
+// Orodha ya "icons" za FontAwesome zinazofaa kwa Category za kifedha/vikundi - kila
+// moja inaonekana kwa muonekano wake halisi kwenye "picker", siyo jina la maandishi tu
+const CATEGORY_ICON_OPTIONS = [
+  "fa-folder-open", "fa-piggy-bank", "fa-chart-pie", "fa-exclamation-triangle",
+  "fa-id-card", "fa-percentage", "fa-hand-holding-heart", "fa-hand-holding-usd",
+  "fa-wallet", "fa-coins", "fa-money-bill-wave", "fa-money-check-alt",
+  "fa-university", "fa-landmark", "fa-gift", "fa-heart", "fa-users",
+  "fa-user-friends", "fa-handshake", "fa-briefcase", "fa-building",
+  "fa-home", "fa-car", "fa-bus", "fa-plane", "fa-graduation-cap",
+  "fa-book", "fa-tools", "fa-wrench", "fa-tractor", "fa-seedling",
+  "fa-tree", "fa-leaf", "fa-store", "fa-shopping-cart", "fa-shopping-bag",
+  "fa-truck", "fa-box", "fa-boxes", "fa-warehouse", "fa-industry",
+  "fa-tshirt", "fa-utensils", "fa-coffee", "fa-glass-cheers", "fa-birthday-cake",
+  "fa-medkit", "fa-heartbeat", "fa-hospital", "fa-pills", "fa-stethoscope",
+  "fa-tint", "fa-bolt", "fa-fire", "fa-water", "fa-solar-panel",
+  "fa-mobile-alt", "fa-laptop", "fa-tv", "fa-camera", "fa-music",
+  "fa-futbol", "fa-basketball-ball", "fa-dumbbell", "fa-running", "fa-star",
+  "fa-trophy", "fa-award", "fa-medal", "fa-flag", "fa-map-marker-alt",
+  "fa-calendar-alt", "fa-clock", "fa-bell", "fa-envelope", "fa-phone",
+  "fa-clipboard-list", "fa-file-invoice-dollar", "fa-receipt", "fa-tags",
+  "fa-shield-alt", "fa-lock", "fa-key", "fa-lightbulb", "fa-cog"
+];
+
+function _renderIconPickerGrid(pickerId, onSelectFnName) {
+  const picker = document.getElementById(pickerId);
+  if (!picker) return;
+  picker.innerHTML = CATEGORY_ICON_OPTIONS.map(icon => `
+    <button type="button" onclick="${onSelectFnName}('${icon}')" title="${icon}"
+      style="border:1px solid #e0e5ea; background:#fff; border-radius:6px; padding:8px 0; cursor:pointer; font-size:16px; color:#2c3e50;">
+      <i class="fas ${icon}"></i>
+    </button>
+  `).join('');
+}
+
+function toggleIconPicker(context) {
+  const pickerMap = {
+    new: 'newCategoryIconPicker',
+    edit: 'editCategoryIconPicker',
+    interest: 'editInterestFundIconPicker'
+  };
+  const selectFnMap = {
+    new: 'selectNewCategoryIcon',
+    edit: 'selectEditCategoryIcon',
+    interest: 'selectInterestFundIcon'
+  };
+  const pickerId = pickerMap[context] || pickerMap.edit;
+  const picker = document.getElementById(pickerId);
+  if (!picker) return;
+  if (picker.classList.contains('hidden')) {
+    _renderIconPickerGrid(pickerId, selectFnMap[context] || selectFnMap.edit);
+    picker.classList.remove('hidden');
+  } else {
+    picker.classList.add('hidden');
+  }
+}
+
+function selectNewCategoryIcon(icon) {
+  document.getElementById('newCategoryIconInput').value = icon;
+  document.getElementById('newCategoryIconPreview').className = 'fas ' + icon;
+  document.getElementById('newCategoryIconLabel').textContent = icon;
+  document.getElementById('newCategoryIconPicker').classList.add('hidden');
+}
+
+function resetNewCategoryIconPicker() {
+  document.getElementById('newCategoryIconInput').value = '';
+  document.getElementById('newCategoryIconPreview').className = 'fas fa-folder-open';
+  document.getElementById('newCategoryIconLabel').textContent = 'Default (fa-folder-open)';
+  document.getElementById('newCategoryIconPicker').classList.add('hidden');
+}
+
+function selectEditCategoryIcon(icon) {
+  document.getElementById('editCategoryIconInput').value = icon;
+  document.getElementById('editCategoryIconPreview').className = 'fas ' + icon;
+  document.getElementById('editCategoryIconLabel').textContent = icon;
+  document.getElementById('editCategoryIconPicker').classList.add('hidden');
+}
+
+function selectInterestFundIcon(icon) {
+  document.getElementById('editInterestFundIconInput').value = icon;
+  document.getElementById('editInterestFundIconPreview').className = 'fas ' + icon;
+  document.getElementById('editInterestFundIconLabel').textContent = icon;
+  document.getElementById('editInterestFundIconPicker').classList.add('hidden');
+}
 
 function addCustomCategory() {
   const input = document.getElementById('newCategoryNameInput');
   const categoryName = input.value.trim();
+  const categoryIcon = document.getElementById('newCategoryIconInput').value;
   
   if (!categoryName) {
     Notiflix.Notify.failure('Tafadhali weka jina la Category');
@@ -10448,16 +11196,19 @@ function addCustomCategory() {
     body: JSON.stringify({
       action: 'addCustomIncomeCategory',
       dbId: currentDbId,
-      categoryName: categoryName
+      categoryName: categoryName,
+      categoryIcon: categoryIcon
     })
   })
   .then(res => res.json())
   .then(data => {
     Notiflix.Loading.remove();
     if (data.status === 'success') {
-      customIncomeCategories = data.customCategories || customIncomeCategories.concat([categoryName]);
+      customIncomeCategories = data.customCategories ? _extractCategoryNames(data.customCategories) : customIncomeCategories.concat([categoryName]);
       input.value = '';
+      resetNewCategoryIconPicker();
       renderSplitCategories(splitCategoriesState);
+      loadSavingsCategoriesLists();
       showQuickNotification(data.message || 'Category imeongezwa kikamilifu');
     } else {
       Notiflix.Notify.failure(data.message || 'Imeshindwa kuongeza Category');
@@ -10495,8 +11246,9 @@ function addCustomExpenseCategoryUI() {
   .then(data => {
     Notiflix.Loading.remove();
     if (data.status === 'success') {
-      customExpenseCategories = data.customCategories || customExpenseCategories.concat([categoryName]);
+      customExpenseCategories = data.customCategories ? _extractCategoryNames(data.customCategories) : customExpenseCategories.concat([categoryName]);
       input.value = '';
+      loadSavingsCategoriesLists();
       showQuickNotification(data.message || 'Category imeongezwa kikamilifu');
     } else {
       Notiflix.Notify.failure(data.message || 'Imeshindwa kuongeza Category');
@@ -10585,6 +11337,8 @@ function deleteFineTypeUI(name) {
     'Ndio, Ondoa',
     'Hapana',
     function() {
+      Notiflix.Loading.standard('Inaondoa...');
+      
       fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({
@@ -10595,6 +11349,7 @@ function deleteFineTypeUI(name) {
       })
       .then(res => res.json())
       .then(data => {
+        Notiflix.Loading.remove();
         if (data.status === 'success') {
           cachedFineTypes = data.fineTypes || [];
           renderFineTypesList();
@@ -10604,6 +11359,7 @@ function deleteFineTypeUI(name) {
         }
       })
       .catch(error => {
+        Notiflix.Loading.remove();
         console.error('Error deleting fine type:', error);
         Notiflix.Notify.failure('Imeshindwa kuondoa aina ya faini');
       });
@@ -10618,18 +11374,50 @@ function renderSplitCategories(selected) {
   const container = document.getElementById('splitCategoriesList');
   if (!container) return;
   
-  const allCategories = SAVINGS_INCOME_CATEGORIES.concat(customIncomeCategories);
+  container.innerHTML = '<p style="color:#999; font-size:12px;">Inapakia...</p>';
   
-  container.innerHTML = allCategories.map(function(cat) {
-    const checked = splitCategoriesState.indexOf(cat) !== -1 ? 'checked' : '';
-    const safeId = 'splitCat_' + cat.replace(/[^a-zA-Z0-9]/g, '_');
-    return `
-      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-        <input type="checkbox" id="${safeId}" value="${cat}" ${checked} onchange="toggleSplitCategory('${cat.replace(/'/g, "\\'")}', this.checked)">
-        <span>${cat}</span>
-      </label>
-    `;
-  }).join('');
+  // Item 2: Categories Zinazogawanyika sasa ni ZILE ZILE zilizopo kwenye tab ya
+  // Categories (Mapato) - endapo Category haipo huko (mfano imeondolewa), haitaonekana
+  // hapa pia. Akiba/Hisa/Faini/Riba ya Mkopo HAZIWEZI kugawanyika kamwe (Mifuko ya
+  // msingi ya moja kwa moja), hivyo hazionekani hapa - hii haijabadilika.
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getSavingsCategoriesFull', dbId: currentDbId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status !== 'success') { container.innerHTML = ''; return; }
+    
+    const nonSplittable = ['Akiba', 'Hisa', 'Faini', 'Riba ya Mkopo'];
+    const allCategories = (data.incomeCategories || [])
+      .map(c => c.name)
+      .filter(name => nonSplittable.indexOf(name) === -1);
+    
+    // Item 2: Category yoyote iliyokwisha kuondolewa (haipo tena kwenye orodha hii)
+    // pia iondolewe kwenye uchaguzi wa "imesetiwa kugawanyika", ili isibaki ikiwa
+    // "checked" kimya kimya bila kuonekana popote
+    splitCategoriesState = splitCategoriesState.filter(cat => allCategories.indexOf(cat) !== -1);
+    
+    if (allCategories.length === 0) {
+      container.innerHTML = '<p style="color:#999; font-size:12px;">Hakuna Categories zinazoweza kugawanyika kwa sasa.</p>';
+      return;
+    }
+    
+    container.innerHTML = allCategories.map(function(cat) {
+      const checked = splitCategoriesState.indexOf(cat) !== -1 ? 'checked' : '';
+      const safeId = 'splitCat_' + cat.replace(/[^a-zA-Z0-9]/g, '_');
+      return `
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <input type="checkbox" id="${safeId}" value="${cat}" ${checked} onchange="toggleSplitCategory('${cat.replace(/'/g, "\\'")}', this.checked)">
+          <span>${cat}</span>
+        </label>
+      `;
+    }).join('');
+  })
+  .catch(error => {
+    console.error('Error loading split categories list:', error);
+    container.innerHTML = '<p style="color:#999; font-size:12px;">Imeshindwa kupakia.</p>';
+  });
 }
 
 function toggleSplitCategory(cat, checked) {
@@ -10709,6 +11497,8 @@ function saveAllocationGroups() {
     return;
   }
   
+  Notiflix.Loading.standard('Inahifadhi...');
+  
   fetch(SCRIPT_URL, {
     method: 'POST',
     body: JSON.stringify({
@@ -10722,6 +11512,7 @@ function saveAllocationGroups() {
   })
   .then(res => res.json())
   .then(data => {
+    Notiflix.Loading.remove();
     if (data.status === 'success') {
       showQuickNotification('Makundi ya mgawo yamehifadhiwa');
     } else {
@@ -10729,6 +11520,7 @@ function saveAllocationGroups() {
     }
   })
   .catch(error => {
+    Notiflix.Loading.remove();
     console.error('Error saving allocation groups:', error);
     Notiflix.Notify.failure('Imeshindwa kuhifadhi makundi ya mgawo');
   });
@@ -10792,6 +11584,292 @@ function switchSettingsTab(tab) {
       if (pane) pane.classList.remove('active');
     }
   });
+  if (tab === 'categories') {
+    loadSavingsCategoriesLists();
+  }
+}
+
+// Item 1/2/3/4: Pakia na onesha orodha KAMILI ya Categories (za mfumo + za mtumiaji),
+// kila moja ikiwa na "tick" ya Gundua (endapo inahusika na Mfuko) na kitufe cha
+// kuondoa (kilichozimwa kwa zilizolindwa)
+function loadSavingsCategoriesLists() {
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getSavingsCategoriesFull', dbId: currentDbId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status !== 'success') return;
+    renderCategoryList('incomeCategoriesList', data.incomeCategories, 'income');
+    renderCategoryList('expenseCategoriesList', data.expenseCategories, 'expense');
+    
+    // Item 2: Mfuko wa Riba ya Mkopo (Mfuko WA PEKEE wa "msingi" unaobaki)
+    currentInterestFundName = data.interestFundName || 'Riba ya Mkopo';
+    currentInterestFundIcon = data.interestFundIcon || 'fa-percentage';
+    const nameEl = document.getElementById('interestFundNameDisplay');
+    const iconEl = document.getElementById('interestFundIconDisplay');
+    if (nameEl) nameEl.textContent = currentInterestFundName;
+    if (iconEl) iconEl.className = 'fas ' + currentInterestFundIcon;
+  })
+  .catch(error => console.error('Error loading categories list:', error));
+}
+
+let currentInterestFundName = 'Riba ya Mkopo';
+let currentInterestFundIcon = 'fa-percentage';
+
+function editInterestFundUI() {
+  Swal.fire({
+    title: 'Hariri Mfuko wa Riba ya Mkopo',
+    html: `
+      <div style="text-align:left;">
+        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Jina la Mfuko</label>
+        <input type="text" id="editInterestFundNameInput" class="swal2-input" value="${currentInterestFundName.replace(/"/g, '&quot;')}" style="margin:0 0 15px;">
+        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Icon</label>
+        <div id="editInterestFundIconDisplay" onclick="toggleIconPicker('interest')" style="border:1px solid #d5dbe0; border-radius:8px; padding:10px 12px; cursor:pointer; display:flex; align-items:center; gap:10px; background:#fff;">
+          <i class="fas ${currentInterestFundIcon}" id="editInterestFundIconPreview" style="font-size:18px; color:#3498db; width:22px; text-align:center;"></i>
+          <span id="editInterestFundIconLabel" style="color:#666; font-size:13px;">${currentInterestFundIcon}</span>
+          <i class="fas fa-chevron-down" style="margin-left:auto; color:#999; font-size:12px;"></i>
+        </div>
+        <div id="editInterestFundIconPicker" class="hidden" style="border:1px solid #eef2f6; border-radius:8px; margin-top:6px; max-height:220px; overflow-y:auto; display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; padding:10px; background:#f8fafc;"></div>
+        <input type="hidden" id="editInterestFundIconInput" value="${currentInterestFundIcon}">
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Hifadhi',
+    cancelButtonText: 'Ghairi',
+    confirmButtonColor: '#3498db',
+    preConfirm: () => {
+      const newName = document.getElementById('editInterestFundNameInput').value.trim();
+      if (!newName) {
+        Swal.showValidationMessage('Tafadhali weka jina la Mfuko');
+        return false;
+      }
+      return {
+        newName: newName,
+        newIcon: document.getElementById('editInterestFundIconInput').value
+      };
+    }
+  }).then((result) => {
+    if (!result.isConfirmed) return;
+    
+    Notiflix.Loading.standard('Inahariri Mfuko...');
+    
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'editInterestFundNameIcon',
+        dbId: currentDbId,
+        newName: result.value.newName,
+        newIcon: result.value.newIcon
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      Notiflix.Loading.remove();
+      if (data.status === 'success') {
+        showQuickNotification(data.message || 'Mfuko umehaririwa kikamilifu');
+        loadSavingsCategoriesLists();
+      } else {
+        Notiflix.Notify.failure(data.message || 'Imeshindwa kuhariri Mfuko');
+      }
+    })
+    .catch(error => {
+      Notiflix.Loading.remove();
+      console.error('Error editing interest fund:', error);
+      Notiflix.Notify.failure('Imeshindwa kuhariri Mfuko');
+    });
+  });
+}
+
+function renderCategoryList(containerId, categories, type) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  if (!categories || categories.length === 0) {
+    container.innerHTML = '<p style="color:#999; font-size:13px;">Hakuna Categories bado.</p>';
+    return;
+  }
+  
+  container.innerHTML = categories.map(cat => {
+    const safeName = cat.name.replace(/'/g, "\\'");
+    const iconClass = cat.icon || 'fa-tag';
+    const discoverToggle = cat.showOnDiscover !== null
+      ? `<label style="display:flex; align-items:center; gap:5px; font-weight:400; cursor:pointer; font-size:13px;">
+           <input type="checkbox" ${cat.showOnDiscover ? 'checked' : ''} onchange="toggleCategoryDiscoverVisibility('${safeName}', '${type}', this.checked)">
+           Gundua
+         </label>`
+      : '';
+    
+    return `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; background:#f8fafc; border-radius:8px;">
+        <span style="font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="editCategoryUI('${safeName}', '${type}', '${cat.icon || ''}')" title="Bonyeza kuhariri">
+          <i class="fas ${iconClass}" style="color:#3498db; width:18px; text-align:center;"></i>
+          ${cat.name}
+          <i class="fas fa-pen" style="font-size:10px; color:#bbb;"></i>
+        </span>
+        <div style="display:flex; align-items:center; gap:14px;">
+          ${discoverToggle}
+          <button class="btn btn-sm btn-danger" onclick="removeCategoryUI('${safeName}', '${type}')" title="Ondoa">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Item 4/5: Hariri Category (jina na/au icon) - mabadiliko yanasambaa kila mahali
+// Category hii ilitumika (miamala, mikopo, mipangilio) kupitia editSavingsCategory
+let editCategoryOriginalName = '';
+let editCategoryOriginalType = '';
+
+function editCategoryUI(categoryName, categoryType, currentIcon) {
+  editCategoryOriginalName = categoryName;
+  editCategoryOriginalType = categoryType;
+  
+  Swal.fire({
+    title: 'Hariri Category',
+    html: `
+      <div style="text-align:left;">
+        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Jina la Category</label>
+        <input type="text" id="editCategoryNameInput" class="swal2-input" value="${categoryName.replace(/"/g, '&quot;')}" style="margin:0 0 15px;">
+        <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Icon</label>
+        <div id="editCategoryIconDisplay" onclick="toggleIconPicker('edit')" style="border:1px solid #d5dbe0; border-radius:8px; padding:10px 12px; cursor:pointer; display:flex; align-items:center; gap:10px; background:#fff;">
+          <i class="fas ${currentIcon || 'fa-tag'}" id="editCategoryIconPreview" style="font-size:18px; color:#3498db; width:22px; text-align:center;"></i>
+          <span id="editCategoryIconLabel" style="color:#666; font-size:13px;">${currentIcon || 'Default'}</span>
+          <i class="fas fa-chevron-down" style="margin-left:auto; color:#999; font-size:12px;"></i>
+        </div>
+        <div id="editCategoryIconPicker" class="hidden" style="border:1px solid #eef2f6; border-radius:8px; margin-top:6px; max-height:220px; overflow-y:auto; display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; padding:10px; background:#f8fafc;"></div>
+        <input type="hidden" id="editCategoryIconInput" value="${currentIcon || ''}">
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Hifadhi',
+    cancelButtonText: 'Ghairi',
+    confirmButtonColor: '#3498db',
+    preConfirm: () => {
+      const newName = document.getElementById('editCategoryNameInput').value.trim();
+      if (!newName) {
+        Swal.showValidationMessage('Tafadhali weka jina la Category');
+        return false;
+      }
+      return {
+        newName: newName,
+        newIcon: document.getElementById('editCategoryIconInput').value
+      };
+    }
+  }).then((result) => {
+    if (!result.isConfirmed) return;
+    
+    Notiflix.Loading.standard('Inahariri Category...');
+    
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'editSavingsCategory',
+        dbId: currentDbId,
+        oldName: editCategoryOriginalName,
+        newName: result.value.newName,
+        newIcon: result.value.newIcon,
+        categoryType: editCategoryOriginalType
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      Notiflix.Loading.remove();
+      if (data.status === 'success') {
+        showQuickNotification(data.message || 'Category imehaririwa kikamilifu');
+        // Sasisha "cache" za mahali pote Category hii inatumika, ili UI ionekane
+        // sahihi papo hapo bila kuhitaji "refresh" ya ukurasa
+        loadSavingsCategoriesLists();
+        renderSplitCategories(splitCategoriesState);
+        loadSettings();
+      } else {
+        Notiflix.Notify.failure(data.message || 'Imeshindwa kuhariri Category');
+      }
+    })
+    .catch(error => {
+      Notiflix.Loading.remove();
+      console.error('Error editing category:', error);
+      Notiflix.Notify.failure('Imeshindwa kuhariri Category');
+    });
+  });
+}
+
+function toggleCategoryDiscoverVisibility(categoryName, categoryType, showOnDiscover) {
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'updateCategoryDiscoverVisibility',
+      dbId: currentDbId,
+      categoryName: categoryName,
+      categoryType: categoryType,
+      showOnDiscover: showOnDiscover
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      showQuickNotification('Mwonekano wa Gundua umesasishwa');
+    } else {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kusasisha');
+      loadSavingsCategoriesLists(); // rudisha hali sahihi endapo imeshindikana
+    }
+  })
+  .catch(error => {
+    console.error('Error updating category visibility:', error);
+    Notiflix.Notify.failure('Imeshindwa kusasisha');
+  });
+}
+
+function removeCategoryUI(categoryName, categoryType) {
+  Notiflix.Confirm.show(
+    'Ondoa Category',
+    `Una uhakika unataka kuondoa Category "${categoryName}"? Miamala iliyokwisha rekodiwa haitaguswa.`,
+    'Ndio, Ondoa',
+    'Hapana',
+    function() {
+      Notiflix.Loading.standard('Inaondoa...');
+      
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'removeSavingsCategory',
+          dbId: currentDbId,
+          categoryName: categoryName,
+          categoryType: categoryType
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        Notiflix.Loading.remove();
+        if (data.status === 'success') {
+          if (categoryType === 'income') {
+            customIncomeCategories = customIncomeCategories.filter(n => n !== categoryName);
+          } else {
+            customExpenseCategories = customExpenseCategories.filter(n => n !== categoryName);
+          }
+          if (removedBuiltinCategories.indexOf(categoryName) === -1) {
+            removedBuiltinCategories.push(categoryName);
+          }
+          loadSavingsCategoriesLists();
+          // Sasisha dropdown ya Category kwenye fomu ya Miamala papo hapo, endapo ipo
+          const currentTxType = document.querySelector('#transactionTypeSelect')
+            ? document.getElementById('transactionTypeSelect').value
+            : (categoryType === 'income' ? 'Income' : 'Expense');
+          updateSavingsCategoriesForType(currentTxType);
+          showQuickNotification(data.message || 'Category imeondolewa');
+        } else {
+          Notiflix.Notify.failure(data.message || 'Imeshindwa kuondoa Category');
+        }
+      })
+      .catch(error => {
+        Notiflix.Loading.remove();
+        console.error('Error removing category:', error);
+        Notiflix.Notify.failure('Imeshindwa kuondoa Category');
+      });
+    }
+  );
 }
 
 function toggleDurationRatesSection() {
@@ -10930,6 +12008,8 @@ function saveDurationRates() {
 let cachedInterestRate = 0;
 let cachedLoanTermUnit = 'Mwezi';
 let cachedLoanInterestMode = 'normal';
+let cachedLatePenaltyPercent = 0;
+let loansLiveCounterInterval = null;
 let cachedLoanInterestDurationRates = [];
 let durationRatesState = [];
 
@@ -10939,25 +12019,280 @@ let cachedFundBalances = {};
 function switchLoansTab(tab) {
   const disburseTab = document.getElementById('loansTabDisburse');
   const docsTab = document.getElementById('loansTabDocs');
+  const infoTab = document.getElementById('loansTabInfo');
   const disburseBtn = document.getElementById('loansTabDisburseBtn');
   const docsBtn = document.getElementById('loansTabDocsBtn');
+  const infoBtn = document.getElementById('loansTabInfoBtn');
+  
+  // Ficha zote tatu kwanza, kisha onesha iliyochaguliwa (rahisi kuliko kudhibiti kila
+  // moja peke yake ikiwa na tabu tatu sasa)
+  [disburseTab, docsTab, infoTab].forEach(t => {
+    if (!t) return;
+    t.style.display = 'none';
+    t.classList.add('hidden');
+  });
+  [disburseBtn, docsBtn, infoBtn].forEach(b => {
+    if (b) b.className = 'btn btn-secondary';
+  });
   
   if (tab === 'docs') {
-    disburseTab.style.display = 'none';
-    disburseTab.classList.add('hidden');
     docsTab.style.display = 'block';
     docsTab.classList.remove('hidden');
-    disburseBtn.className = 'btn btn-secondary';
     docsBtn.className = 'btn btn-success';
     loadLoanDocumentTemplates();
     updateLoanDocPreview();
+  } else if (tab === 'info') {
+    infoTab.style.display = 'block';
+    infoTab.classList.remove('hidden');
+    infoBtn.className = 'btn btn-success';
+    loadLoanBorrowersInfo();
   } else {
     disburseTab.style.display = 'block';
     disburseTab.classList.remove('hidden');
-    docsTab.style.display = 'none';
-    docsTab.classList.add('hidden');
     disburseBtn.className = 'btn btn-success';
-    docsBtn.className = 'btn btn-secondary';
+  }
+}
+
+// Item 3: "TAARIFA ZA MIKOPO" - Taarifa za Wakopaji wote pamoja na Fomu/Mkataba
+// walizopakia. Bonyeza jina la mkopaji kufungua/kufunga maelezo yake. Item 2: Mkopaji
+// mwenye Mikopo zaidi ya mmoja anaonekana MARA MOJA tu - Mikopo yake yote inaonekana
+// ndani ya sehemu moja iliyofunguka, kila mkopo na taarifa/faili zake.
+function loadLoanBorrowersInfo() {
+  const container = document.getElementById('loanBorrowersList');
+  if (!container) return;
+  
+  container.innerHTML = '<p style="color:#999; font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Inapakia...</p>';
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'listLoans', dbId: currentDbId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status !== 'success' || !data.loans || data.loans.length === 0) {
+      container.innerHTML = '<p style="color:#999; font-size:13px;">Hakuna mikopo bado.</p>';
+      return;
+    }
+    
+    // Item 2: kusanya Mikopo yote kwa Mkopaji mmoja (Member ID, au jina lake kwa
+    // asiyekuwa mwanachama), badala ya kuonesha jina lake mara nyingi
+    const grouped = {};
+    data.loans.forEach(loan => {
+      const key = loan['Member ID'] || ('name:' + (loan['Member Name'] || 'Hajulikani'));
+      if (!grouped[key]) {
+        grouped[key] = { name: loan['Member Name'] || 'Hajulikani', photo: loan['Member Photo'] || '', loans: [] };
+      }
+      grouped[key].loans.push(loan);
+    });
+    
+    // Ndani ya kila mkopaji: Mikopo yake Newest to Oldest
+    Object.values(grouped).forEach(g => {
+      g.loans.sort((a, b) => (new Date(b['Disbursed Date']).getTime() || 0) - (new Date(a['Disbursed Date']).getTime() || 0));
+    });
+    
+    // Wakopaji wenyewe: panga kwa mkopo wao wa hivi karibuni zaidi (Newest to Oldest)
+    const borrowerGroups = Object.values(grouped).sort((a, b) => {
+      const latestA = new Date(a.loans[0]['Disbursed Date']).getTime() || 0;
+      const latestB = new Date(b.loans[0]['Disbursed Date']).getTime() || 0;
+      return latestB - latestA;
+    });
+    
+    container.innerHTML = borrowerGroups.map((group, idx) => {
+      const activeCount = group.loans.filter(l => l.Status === 'Active').length;
+      const loanCountLabel = group.loans.length > 1 ? `<span style="font-size:12px; color:#999; font-weight:400;">(Mikopo ${group.loans.length})</span>` : '';
+      
+      const loansHtml = group.loans.map((loan, li) => {
+        const hasForm = loan['Application Form URL'];
+        const hasContract = loan['Contract URL'];
+        const statusBadge = loan.Status === 'Active'
+          ? '<span class="status-badge status-active">Inaendelea</span>'
+          : '<span class="status-badge status-inactive">Imekamilika</span>';
+        
+        return `
+          <div style="border:1px solid #eef2f6; border-radius:8px; padding:12px; ${li < group.loans.length - 1 ? 'margin-bottom:10px;' : ''} background:#fff;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+              <span style="font-size:12px; color:#999; font-weight:600;">Mkopo wa ${loan['Disbursed Date'] ? new Date(loan['Disbursed Date']).toLocaleDateString('sw-TZ') : '-'}</span>
+              ${statusBadge}
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:13px; margin-bottom:10px;">
+              <div><strong>Mfuko:</strong> ${loan['Source Fund'] || 'Akiba'}</div>
+              <div><strong>Mtaji:</strong> ${formatCurrency(loan['Principal Amount'])}</div>
+              <div><strong>Riba:</strong> ${formatCurrency(loan['Interest Amount'])}</div>
+              <div><strong>Jumla ya Kulipa:</strong> ${formatCurrency(loan['Total To Pay'])}</div>
+              <div><strong>Tarehe ya Kurejesha:</strong> ${loan['Due Date'] ? new Date(loan['Due Date']).toLocaleDateString('sw-TZ') : '-'}</div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              ${hasForm
+                ? `<button type="button" class="btn btn-sm btn-primary" onclick="openLoanDocument('${hasForm}', 'Fomu ya Maombi')"><i class="fas fa-file-pdf"></i> Fomu ya Maombi</button>`
+                : `<span style="font-size:12px; color:#999;"><i class="fas fa-file-pdf"></i> Hakuna Fomu iliyopakiwa</span>`}
+              ${hasContract
+                ? `<button type="button" class="btn btn-sm btn-primary" onclick="openLoanDocument('${hasContract}', 'Mkataba')"><i class="fas fa-file-contract"></i> Mkataba</button>`
+                : `<span style="font-size:12px; color:#999;"><i class="fas fa-file-contract"></i> Hakuna Mkataba uliopakiwa</span>`}
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      return `
+        <div style="border:1px solid #eef2f6; border-radius:10px; overflow:hidden;">
+          <div onclick="toggleBorrowerDetails(${idx})" style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:pointer; background:#f8fafc;">
+            <span style="font-weight:600; display:flex; align-items:center; gap:8px;">
+              ${group.photo
+                ? `<img src="${group.photo}" style="width:28px; height:28px; border-radius:50%; object-fit:cover;">`
+                : `<i class="fas fa-user-circle" style="color:#3498db; font-size:22px;"></i>`}
+              ${group.name} ${loanCountLabel}
+            </span>
+            <div style="display:flex; align-items:center; gap:10px;">
+              ${activeCount > 0 ? `<span class="status-badge status-active">${activeCount} inaendelea</span>` : ''}
+              <i class="fas fa-chevron-down" id="borrowerChevron_${idx}" style="color:#999; font-size:12px; transition: transform 0.2s;"></i>
+            </div>
+          </div>
+          <div class="hidden" id="borrowerDetails_${idx}" style="padding:14px; border-top:1px solid #eef2f6; background:#fbfcfd;">
+            ${loansHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+  })
+  .catch(error => {
+    console.error('Error loading borrowers info:', error);
+    container.innerHTML = '<p style="color:#999; font-size:13px;">Imeshindwa kupakia.</p>';
+  });
+}
+
+// Item 1/2: FUNGUA faili (kama "preview" safi ya PDF) - SIYO kupakua moja kwa moja.
+// "/preview" ya Google Drive inaonesha PDF ndani ya "viewer" safi (bila UI kamili ya
+// akaunti/Drive), na "viewer" hiyo yenyewe ina kitufe chake cha "Pakua" (Download)
+// endapo mtumiaji anataka kuihifadhi - hivyo hatuhitaji tena kusoma faili upande wa
+// server kabisa, muundo wa URL pekee unatosha.
+function openLoanDocument(fileUrl, label) {
+  // MUHIMU (rekebisho la mwisho kabisa): "iframe" yenye "blob:" URL haiaminiki
+  // kwenye Chrome ya Android - badala ya kuonesha PDF ndani ya ukurasa, Android
+  // mara nyingi inaonesha "kifungua faili" cha jumla (kama picha uliyotuma) badala
+  // ya maudhui halisi. Suluhisho la KUDUMU: tumia PDF.js (maktaba ya JavaScript)
+  // kuchora KILA UKURASA wa PDF moja kwa moja kwenye "canvas" ya HTML - hii
+  // inafanya kazi SAWA kwenye vivinjari VYOTE (kompyuta na simu), kwa sababu
+  // haitegemei "PDF plugin" ya asili ya kivinjari kabisa. Kitufe cha "Pakua"
+  // ni chetu wenyewe (custom), hivyo hakuna alama ya Google Drive popote.
+  Notiflix.Loading.standard('Inafungua ' + label + '...');
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getLoanDocumentFile', dbId: currentDbId, fileUrl: fileUrl })
+  })
+  .then(res => res.json())
+  .then(data => {
+    Notiflix.Loading.remove();
+    if (data.status !== 'success') {
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kufungua faili');
+      return;
+    }
+    
+    const byteCharacters = atob(data.pdfBase64);
+    const byteArray = new Uint8Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteArray[i] = byteCharacters.charCodeAt(i);
+    }
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    const blobUrl = URL.createObjectURL(blob);
+    const fileName = data.fileName || (label + '.pdf');
+    
+    Swal.fire({
+      title: label,
+      html: `
+        <div style="text-align:right; margin-bottom:10px;">
+          <button type="button" id="pdfDownloadBtn" class="btn btn-sm btn-primary">
+            <i class="fas fa-download"></i> Pakua
+          </button>
+        </div>
+        <div id="pdfViewerContainer" style="width:100%; max-height:80vh; overflow-y:auto; background:#525659; border-radius:8px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+          <p style="color:#fff; font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Inapakia ukurasa...</p>
+        </div>
+      `,
+      width: '98%',
+      showConfirmButton: false,
+      showCloseButton: true,
+      padding: '10px',
+      didOpen: () => {
+        // ZINGATIA: tumia forceDownloadPDF() ile ile inayotumika kwa Ripoti - ina
+        // toleo tofauti kwa Website (blob) na App (URL ya moja kwa moja), hivyo
+        // kitufe hiki cha "Pakua" sasa kinafanya kazi sahihi kwenye mazingira yote
+        // mawili, kama ilivyo kwa button za kutengeneza Ripoti (Item 1)
+        const downloadBtn = document.getElementById('pdfDownloadBtn');
+        downloadBtn.addEventListener('click', () => {
+          // Item 1: onesha "Inapakua..." wakati mchakato unaendelea (Website NA App).
+          // Hakuna tukio wazi la "umekamilika" (blob/location.href haziturudishii
+          // arifa moja kwa moja), hivyo tunarudisha kitufe baada ya muda mfupi wa
+          // busara unaotosha mchakato kuanza kikamilifu.
+          const originalHtml = downloadBtn.innerHTML;
+          downloadBtn.disabled = true;
+          downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Inapakua...';
+          
+          forceDownloadPDF(data.pdfBase64, fileName, data.mimeType, data.downloadUrl);
+          
+          setTimeout(() => {
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = originalHtml;
+          }, 2000);
+        });
+        
+        // Chora kila ukurasa wa PDF kwenye "canvas" kwa kutumia PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        pdfjsLib.getDocument({ data: byteArray }).promise.then(pdfDoc => {
+          const container = document.getElementById('pdfViewerContainer');
+          container.innerHTML = '';
+          
+          const renderPage = (pageNum) => {
+            return pdfDoc.getPage(pageNum).then(page => {
+              const viewport = page.getViewport({ scale: 1.3 });
+              const canvas = document.createElement('canvas');
+              canvas.style.maxWidth = '100%';
+              canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+              canvas.width = viewport.width;
+              canvas.height = viewport.height;
+              container.appendChild(canvas);
+              const ctx = canvas.getContext('2d');
+              return page.render({ canvasContext: ctx, viewport: viewport }).promise;
+            });
+          };
+          
+          let chain = Promise.resolve();
+          for (let p = 1; p <= pdfDoc.numPages; p++) {
+            chain = chain.then(() => renderPage(p));
+          }
+          chain.catch(err => {
+            console.error('Error rendering PDF page:', err);
+            container.innerHTML = '<p style="color:#fff; font-size:13px;">Imeshindwa kuonesha ukurasa wa PDF. Tumia kitufe cha "Pakua" hapo juu.</p>';
+          });
+        }).catch(err => {
+          console.error('Error loading PDF with pdf.js:', err);
+          const container = document.getElementById('pdfViewerContainer');
+          if (container) container.innerHTML = '<p style="color:#fff; font-size:13px;">Imeshindwa kuonesha PDF. Tumia kitufe cha "Pakua" hapo juu.</p>';
+        });
+      },
+      didClose: () => {
+        URL.revokeObjectURL(blobUrl);
+      }
+    });
+  })
+  .catch(error => {
+    Notiflix.Loading.remove();
+    console.error('Error opening loan document:', error);
+    Notiflix.Notify.failure('Imeshindwa kufungua faili');
+  });
+}
+
+function toggleBorrowerDetails(idx) {
+  const details = document.getElementById('borrowerDetails_' + idx);
+  const chevron = document.getElementById('borrowerChevron_' + idx);
+  if (!details) return;
+  if (details.classList.contains('hidden')) {
+    details.classList.remove('hidden');
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+  } else {
+    details.classList.add('hidden');
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
   }
 }
 
@@ -11246,6 +12581,8 @@ function resetLoanDocumentTemplates() {
     'Ndio, Rudisha',
     'Hapana',
     function() {
+      Notiflix.Loading.standard('Inarudisha...');
+      
       fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({
@@ -11259,6 +12596,7 @@ function resetLoanDocumentTemplates() {
       })
       .then(res => res.json())
       .then(data => {
+        Notiflix.Loading.remove();
         if (data.status === 'success') {
           loadLoanDocumentTemplates();
           showQuickNotification('Imerudishwa kwa chaguo-msingi');
@@ -11267,6 +12605,7 @@ function resetLoanDocumentTemplates() {
         }
       })
       .catch(error => {
+        Notiflix.Loading.remove();
         console.error('Error resetting loan document templates:', error);
         Notiflix.Notify.failure('Imeshindwa kurudisha kwa chaguo-msingi');
       });
@@ -11286,6 +12625,7 @@ function loadLoansDashboard() {
       cachedInterestRate = parseFloat(data.settings['Interest Rate']) || 0;
       cachedLoanTermUnit = data.settings['Loan Term Unit'] || 'Mwezi';
       cachedLoanInterestMode = (data.settings['Loan Interest Mode'] || 'normal') === 'duration_based' ? 'duration_based' : 'normal';
+      cachedLatePenaltyPercent = parseFloat(data.settings['Late Payment Penalty Percent']) || 0;
       try {
         cachedLoanInterestDurationRates = JSON.parse(data.settings['Loan Interest Duration Rates'] || '[]');
       } catch (e) {
@@ -11353,8 +12693,22 @@ function loadLoansDashboard() {
   .then(res => res.json())
   .then(data => {
     if (data.status === 'success') {
-      renderLoansTable(data.loans || []);
-      const activeCount = (data.loans || []).filter(l => l.Status === 'Active').length;
+      if (data.penaltyPercent !== undefined) cachedLatePenaltyPercent = parseFloat(data.penaltyPercent) || 0;
+      
+      // Item 2: "Inaendelea" (Active) kwanza, kisha "Imekamilika" (Completed); ndani ya
+      // kundi moja, Newest to Oldest kwa Tarehe ya Mkopo
+      const sortedLoans = (data.loans || []).slice().sort((a, b) => {
+        const statusA = a.Status === 'Active' ? 0 : 1;
+        const statusB = b.Status === 'Active' ? 0 : 1;
+        if (statusA !== statusB) return statusA - statusB;
+        
+        const dateA = new Date(a['Disbursed Date']).getTime() || 0;
+        const dateB = new Date(b['Disbursed Date']).getTime() || 0;
+        return dateB - dateA;
+      });
+      
+      renderLoansTable(sortedLoans);
+      const activeCount = sortedLoans.filter(l => l.Status === 'Active').length;
       document.getElementById('loansActiveCount').textContent = activeCount;
     }
   })
@@ -11501,9 +12855,14 @@ function downloadLoanDocument(docType) {
       Notiflix.Notify.failure('Tafadhali weka Anwani ya Mkopaji');
       return;
     }
+    const borrowerIdNumber = document.getElementById('loanDocBorrowerIdNumber').value.trim();
+    if (!isValidNidaFormatClient(borrowerIdNumber)) {
+      Notiflix.Notify.failure('Namba ya NIDA ya mkopaji siyo kamili. Muundo sahihi ni: XXXXXXXX-XXXXX-XXXXX-XX (tarakimu 20)');
+      return;
+    }
     docData.borrowerName = borrowerName;
     docData.borrowerPhone = borrowerPhone;
-    docData.borrowerIdNumber = document.getElementById('loanDocBorrowerIdNumber').value;
+    docData.borrowerIdNumber = borrowerIdNumber;
     docData.borrowerAddress = borrowerAddress;
   } else {
     const memberId = document.getElementById('loanDocMemberSelect').value;
@@ -11552,6 +12911,48 @@ function updateLoanSourceFundBalance() {
   
   const balance = cachedFundBalances[fund] !== undefined ? cachedFundBalances[fund] : 0;
   label.innerHTML = `<i class="fas fa-info-circle"></i> Salio linalopatikana kwenye ${fund}: <strong>${formatCurrency(balance)}</strong>`;
+}
+
+// Item 3: baada ya kuchagua Mwanachama NA Mfuko wa Kukopesha, onesha kiasi alichokwisha
+// kuchangia mwanachama huyo kwenye mfuko huo, ili Afisa aone kabla ya kumkopesha
+function updateMemberFundContribution() {
+  const memberSelect = document.getElementById('loanMemberSelect');
+  const memberId = memberSelect ? memberSelect.value : '';
+  const fund = document.getElementById('loanSourceFund').value;
+  const label = document.getElementById('memberFundContribution');
+  if (!label) return;
+  
+  if (!memberId || !fund) {
+    label.style.display = 'none';
+    label.textContent = '';
+    return;
+  }
+  
+  label.style.display = 'block';
+  label.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Inapakia mchango wa mwanachama...';
+  
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'getMemberFundContribution',
+      dbId: currentDbId,
+      memberId: memberId,
+      fundName: fund
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      const memberLabel = memberSelect.options[memberSelect.selectedIndex].textContent;
+      label.innerHTML = `<i class="fas fa-hand-holding-usd"></i> ${memberLabel} amechangia ${formatCurrency(data.contribution)} kwenye ${fund}`;
+    } else {
+      label.style.display = 'none';
+    }
+  })
+  .catch(error => {
+    console.error('Error loading member fund contribution:', error);
+    label.style.display = 'none';
+  });
 }
 
 let cachedExpenseFundBalances = {};
@@ -11651,6 +13052,53 @@ function updateLoanPreview() {
   const calculatedDate = new Date();
   calculatedDate.setMonth(calculatedDate.getMonth() + monthsInput);
   dueDateEl.textContent = calculatedDate.toLocaleDateString('sw-TZ');
+}
+
+// Item 1/2: Kupakia Fomu ya Maombi/Mkataba (PDF, hiari) - inasomwa kama base64 na
+// kutumwa pamoja na ombi la "Toa Mkopo". Faili hizi zinahifadhiwa Google Drive
+// upande wa server (siyo Sheet cell), hivyo kikomo cha herufi 50,000 hakitumiki kwa
+// faili hizi kabisa - lakini bado tunahakiki ukubwa unaofaa (10MB) kabla ya kutuma
+let pendingLoanApplicationFormBase64 = null;
+let pendingLoanContractBase64 = null;
+
+function handleLoanDocumentUpload(event, docType) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const statusElId = docType === 'applicationForm' ? 'loanApplicationFormStatus' : 'loanContractStatus';
+  const statusEl = document.getElementById(statusElId);
+  
+  if (file.type !== 'application/pdf') {
+    Notiflix.Notify.failure('Tafadhali chagua faili la PDF pekee');
+    event.target.value = '';
+    if (statusEl) statusEl.textContent = '';
+    return;
+  }
+  
+  const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB - ukomo wa busara kwa upakiaji
+  if (file.size > MAX_SIZE_BYTES) {
+    Notiflix.Notify.failure('Faili ni kubwa mno (zaidi ya 10MB). Tafadhali tumia PDF ndogo zaidi.');
+    event.target.value = '';
+    if (statusEl) statusEl.textContent = '';
+    return;
+  }
+  
+  if (statusEl) statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Inasoma faili...';
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    if (docType === 'applicationForm') {
+      pendingLoanApplicationFormBase64 = e.target.result;
+    } else {
+      pendingLoanContractBase64 = e.target.result;
+    }
+    if (statusEl) statusEl.innerHTML = `<i class="fas fa-check-circle" style="color:#28a745;"></i> ${file.name} imechaguliwa`;
+  };
+  reader.onerror = function() {
+    Notiflix.Notify.failure('Imeshindwa kusoma faili hiyo');
+    if (statusEl) statusEl.textContent = '';
+  };
+  reader.readAsDataURL(file);
 }
 
 function submitDisburseLoan() {
@@ -11762,7 +13210,9 @@ function finalizeDisburseLoan(memberId, sourceFund, principalAmount, loanTermMon
       sourceFund: sourceFund,
       principalAmount: principalAmount,
       loanTermMonths: loanTermMonths,
-      notes: notes
+      notes: notes,
+      applicationFormBase64: pendingLoanApplicationFormBase64,
+      contractBase64: pendingLoanContractBase64
     })
   })
   .then(res => res.json())
@@ -11775,8 +13225,15 @@ function finalizeDisburseLoan(memberId, sourceFund, principalAmount, loanTermMon
       document.getElementById('loanNotes').value = '';
       document.getElementById('loanMemberSelect').value = '';
       document.getElementById('loanSourceFund').value = '';
+      document.getElementById('loanApplicationFormUpload').value = '';
+      document.getElementById('loanContractUpload').value = '';
+      document.getElementById('loanApplicationFormStatus').textContent = '';
+      document.getElementById('loanContractStatus').textContent = '';
+      pendingLoanApplicationFormBase64 = null;
+      pendingLoanContractBase64 = null;
       updateLoanPreview();
       updateLoanSourceFundBalance();
+      updateMemberFundContribution();
       loadLoansDashboard();
     } else {
       Notiflix.Notify.failure(data.message || 'Imeshindwa kutoa mkopo');
@@ -11793,10 +13250,17 @@ function renderLoansTable(loans) {
   const tbody = document.querySelector('#loansTable tbody');
   if (!tbody) return;
   
+  // Simamisha "live timer" ya awali (endapo ipo) kabla ya kuchora upya jedwali, ili
+  // tusiwe na "intervals" nyingi zikiendesha kwa wakati mmoja
+  if (loansLiveCounterInterval) {
+    clearInterval(loansLiveCounterInterval);
+    loansLiveCounterInterval = null;
+  }
+  
   if (!loans || loans.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="10" style="text-align: center; padding: 20px; color: #666;">
+        <td colspan="13" style="text-align: center; padding: 20px; color: #666;">
           <i class="fas fa-info-circle"></i> Hakuna mikopo bado
         </td>
       </tr>
@@ -11810,46 +13274,306 @@ function renderLoansTable(loans) {
       ? '<span class="status-badge status-active">Inaendelea</span>'
       : '<span class="status-badge status-inactive">Imekamilika</span>';
     
+    const loanId = loan['Loan ID'] || '';
     const penaltyAmount = parseFloat(loan['Penalty Amount']) || 0;
-    const monthsOverdue = parseInt(loan['Months Overdue']) || 0;
+    const penaltyPaidSoFar = parseFloat(loan['Penalty Paid So Far']) || 0;
+    const totalToPay = parseFloat(loan['Total To Pay']) || 0;
     const balanceWithPenalty = loan['Balance With Penalty'] !== undefined ? loan['Balance With Penalty'] : loan['Balance'];
-    const penaltyCell = penaltyAmount > 0
-      ? `<span style="color:#c0392b; font-weight:700;" title="Umechelewa miezi ${monthsOverdue}">${formatCurrency(penaltyAmount)}</span>`
+    
+    // Item 1: Ongezeko ni "live" (linaongezeka kila sekunde) endapo mkopo bado
+    // "Active" na tayari umechelewa - seli hii inasasishwa na updateLiveLoanCounters().
+    // Ikiwa mkopo "Imekamilika" na kulikuwa na Ongezeko, kiasi kilichotozwa (na
+    // kulipwa) kinaonekana kwa rangi ya KIJANI (kumbukumbu ya kudumu), siyo "-"
+    const hasLivePenalty = isActive && loan['Due Date'] && penaltyAmount > 0;
+    let penaltyCell;
+    if (hasLivePenalty) {
+      penaltyCell = `<span id="penalty_${loanId}" style="color:#c0392b; font-weight:700; white-space:nowrap;">${formatCurrency(penaltyAmount)}</span>`;
+    } else if (penaltyAmount > 0) {
+      penaltyCell = `<span style="color:#c0392b; font-weight:700;">${formatCurrency(penaltyAmount)}</span>`;
+    } else if (!isActive && penaltyPaidSoFar > 0) {
+      penaltyCell = `<span style="color:#16a085; font-weight:700;" title="Ongezeko lililotozwa na kulipwa">${formatCurrency(penaltyPaidSoFar)}</span>`;
+    } else {
+      penaltyCell = '-';
+    }
+    
+    // Item 2: JUMLA = Mtaji + Riba + Ongezeko (endapo lipo); "live" kwa mikopo
+    // "Active" yenye Ongezeko linaloendelea, au ya kudumu (Total To Pay + Ongezeko
+    // lililolipwa) kwa mikopo "Imekamilika"
+    let jumlaCell;
+    if (hasLivePenalty) {
+      jumlaCell = `<span id="jumla_${loanId}" style="font-weight:700; white-space:nowrap;">${formatCurrency(totalToPay + penaltyAmount)}</span>`;
+    } else if (!isActive && penaltyPaidSoFar > 0) {
+      jumlaCell = `<span style="font-weight:700;">${formatCurrency(totalToPay + penaltyPaidSoFar)}</span>`;
+    } else {
+      jumlaCell = `<span style="font-weight:700;">${formatCurrency(totalToPay)}</span>`;
+    }
+    
+    let dueDateCell = '-';
+    if (loan['Due Date']) {
+      const dueDateFormatted = new Date(loan['Due Date']).toLocaleDateString('sw-TZ');
+      const countdownId = isActive ? `id="countdown_${loanId}"` : '';
+      dueDateCell = (isActive && penaltyAmount > 0)
+        ? `<span style="color:#c0392b; font-weight:700;">${dueDateFormatted}</span><div ${countdownId} style="font-size: 9px; margin-top: 2px; white-space: nowrap;"></div>`
+        : `${dueDateFormatted}<div ${countdownId} style="font-size: 9px; margin-top: 2px; white-space: nowrap;"></div>`;
+    }
+    
+    const disbursedDateCell = loan['Disbursed Date']
+      ? new Date(loan['Disbursed Date']).toLocaleDateString('sw-TZ')
       : '-';
     
+    // Data ghafi inayohitajika kwa hesabu ya "live" (Item 1/2) - inawekwa kwenye "row"
+    // yenyewe kama "data-*" attributes, ili updateLiveLoanCounters() iweze kuzitumia
+    // bila kuhitaji kuwasiliana na server kila sekunde
+    const liveDataAttrs = (isActive && loan['Due Date']) ? `
+      data-live-loan="1"
+      data-due-date="${loan['Due Date']}"
+      data-total-to-pay="${totalToPay}"
+      data-penalty-paid="${penaltyPaidSoFar}"
+      data-balance="${parseFloat(loan['Balance']) || 0}"
+    ` : '';
+    
+    // Item 2 (kutoka zamu iliyopita): "IMELIPWA" sasa inajumuisha Ongezeko
+    // lililokwisha kulipwa pia (siyo Mtaji na Riba pekee)
+    const totalPaidIncludingPenalty = (parseFloat(loan['Amount Paid']) || 0) + penaltyPaidSoFar;
+    
+    // Item 2: MUDA - idadi ya miezi iliyowekwa wakati wa kutoa mkopo. Mikopo
+    // iliyotolewa KABLA ya maboresho haya haitakuwa na thamani hii (column mpya)
+    const loanTermMonthsValue = parseFloat(loan['Loan Term Months']) || 0;
+    const loanTermMonthsCell = loanTermMonthsValue > 0
+      ? `${loanTermMonthsValue === 1 ? 'Mwezi' : 'Miezi'} ${loanTermMonthsValue}`
+      : '-';
+    
+    // Item: Picha ndogo ya wasifu kando ya jina, kama ipo (Item: picha zionekane
+    // sehemu zote zinazofaa)
+    const memberPhotoCell = loan['Member Photo']
+      ? `<img src="${loan['Member Photo']}" style="width:26px; height:26px; border-radius:50%; object-fit:cover; vertical-align:middle; margin-right:6px;">`
+      : `<i class="fas fa-user-circle" style="color:#c9d1d9; margin-right:6px; font-size:18px; vertical-align:middle;"></i>`;
+    
     return `
-      <tr>
-        <td>${loan['Member Name'] || ''}</td>
+      <tr ${liveDataAttrs}>
+        <td>${memberPhotoCell}${loan['Member Name'] || ''}</td>
         <td>${loan['Source Fund'] || 'Akiba'}</td>
         <td>${formatCurrency(loan['Principal Amount'])}</td>
+        <td>${loanTermMonthsCell}</td>
         <td>${formatCurrency(loan['Interest Amount'])}</td>
-        <td>${formatCurrency(loan['Total To Pay'])}</td>
-        <td>${formatCurrency(loan['Amount Paid'])}</td>
         <td>${penaltyCell}</td>
-        <td>${formatCurrency(balanceWithPenalty)}</td>
+        <td>${jumlaCell}</td>
+        <td>${formatCurrency(totalPaidIncludingPenalty)}</td>
+        <td><span id="balance_${loanId}">${formatCurrency(balanceWithPenalty)}</span></td>
+        <td>${disbursedDateCell}</td>
+        <td>${dueDateCell}</td>
         <td>${statusBadge}</td>
         <td>
-          ${isActive ? `<button class="btn btn-sm btn-primary" onclick="openLoanRepaymentModal('${loan['Loan ID']}', '${(loan['Member Name'] || '').replace(/'/g, "\\'")}', ${balanceWithPenalty})">
+          ${isActive ? `<button class="btn btn-sm btn-primary" onclick="openLoanRepaymentModal('${loanId}', '${(loan['Member Name'] || '').replace(/'/g, "\\'")}', ${balanceWithPenalty}, '${loan['Due Date'] || ''}', ${totalToPay}, ${penaltyPaidSoFar}, ${parseFloat(loan['Balance']) || 0}, '${(loan['Member Photo'] || '').replace(/'/g, "\\'")}')">
             <i class="fas fa-money-check-alt"></i> Lipa
           </button>` : '-'}
         </td>
       </tr>
     `;
   }).join('');
+  
+  // Anzisha "live timer" - inasasisha Ongezeko na "countdown" kila sekunde (Item 1/2)
+  updateLiveLoanCounters();
+  loansLiveCounterInterval = setInterval(updateLiveLoanCounters, 1000);
 }
 
-function openLoanRepaymentModal(loanId, memberName, balance) {
+// Item 2: "Siku, Saa, Dakika, Sekunde" - muundo kamili wa "countdown"/"countup" -
+// sekunde zinaonekana zikipungua/kuongezeka LIVE, kila sekunde
+function formatDHMS(totalSeconds) {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const days = Math.floor(s / 86400);
+  const hours = Math.floor((s % 86400) / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = s % 60;
+  return `${days}d ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+}
+
+// Item 1: Ongezeko KIENDELEVU (continuous, kwa sekunde) - FOMULA HII NI SAWA KABISA
+// na ile ya backend (_calculateLoanPenalty huko financial.gs), ili kiasi
+// kinachoonekana "live" hapa kilingane KABISA na kiasi halisi kitakachotozwa
+function calculateLivePenalty(totalToPay, dueDateMs, nowMs, penaltyPercent, penaltyPaidSoFar) {
+  const secondsOverdue = (nowMs - dueDateMs) / 1000;
+  if (secondsOverdue <= 0 || penaltyPercent <= 0) {
+    return { outstandingPenalty: 0, secondsOverdue: 0 };
+  }
+  const secondsPerMonth = 30 * 24 * 60 * 60;
+  const monthsOverdueContinuous = secondsOverdue / secondsPerMonth;
+  const totalPenaltyAccrued = totalToPay * (penaltyPercent / 100) * monthsOverdueContinuous;
+  const outstandingPenalty = Math.max(0, totalPenaltyAccrued - penaltyPaidSoFar);
+  return { outstandingPenalty: outstandingPenalty, secondsOverdue: secondsOverdue };
+}
+
+// Inasasisha seli zote za "live" (Ongezeko + Salio + Countdown/Countup) kila sekunde,
+// bila kuchora upya jedwali zima (kwa ufanisi) - Item 1/2
+function updateLiveLoanCounters() {
+  const rows = document.querySelectorAll('#loansTable tbody tr[data-live-loan="1"]');
+  if (rows.length === 0) return;
+  
+  const nowMs = Date.now();
+  
+  rows.forEach(row => {
+    const dueDateMs = new Date(row.getAttribute('data-due-date')).getTime();
+    if (isNaN(dueDateMs)) return;
+    
+    const totalToPay = parseFloat(row.getAttribute('data-total-to-pay')) || 0;
+    const penaltyPaidSoFar = parseFloat(row.getAttribute('data-penalty-paid')) || 0;
+    const balance = parseFloat(row.getAttribute('data-balance')) || 0;
+    
+    const loanIdMatch = row.querySelector('[id^="balance_"]');
+    const loanId = loanIdMatch ? loanIdMatch.id.replace('balance_', '') : null;
+    
+    const diffMs = dueDateMs - nowMs;
+    const countdownEl = document.getElementById('countdown_' + loanId);
+    
+    if (diffMs >= 0) {
+      // Bado haijafika - "countdown" ya muda uliosalia (Siku, Saa, Dakika, Sekunde)
+      if (countdownEl) {
+        countdownEl.style.color = '#1a5276';
+        countdownEl.innerHTML = `<i class="fas fa-hourglass-half"></i> Imesalia ${formatDHMS(diffMs / 1000)}`;
+      }
+      return;
+    }
+    
+    // Tayari imepita - "countup" ya muda uliozidi (Ongezeko linaloongezeka)
+    if (countdownEl) {
+      countdownEl.style.color = '#c0392b';
+      countdownEl.style.fontWeight = '600';
+      countdownEl.innerHTML = `<i class="fas fa-hourglass-end"></i> Amechelewa ${formatDHMS(Math.abs(diffMs) / 1000)}`;
+    }
+    
+    if (cachedLatePenaltyPercent > 0) {
+      const live = calculateLivePenalty(totalToPay, dueDateMs, nowMs, cachedLatePenaltyPercent, penaltyPaidSoFar);
+      
+      const penaltyEl = document.getElementById('penalty_' + loanId);
+      if (penaltyEl) {
+        penaltyEl.textContent = formatCurrency(live.outstandingPenalty);
+      }
+      
+      const balanceEl = document.getElementById('balance_' + loanId);
+      if (balanceEl) {
+        balanceEl.textContent = formatCurrency(balance + live.outstandingPenalty);
+      }
+      
+      // Item 2: JUMLA (Mtaji+Riba+Ongezeko) pia ni "live" - inaongezeka pamoja na
+      // Ongezeko kila sekunde
+      const jumlaEl = document.getElementById('jumla_' + loanId);
+      if (jumlaEl) {
+        jumlaEl.textContent = formatCurrency(totalToPay + live.outstandingPenalty);
+      }
+    }
+  });
+}
+
+function openLoanRepaymentModal(loanId, memberName, balance, dueDateStr, totalToPay, penaltyPaidSoFar, rawBalance, memberPhoto) {
+  let repaymentModalInterval = null;
+  let isFrozen = false;
+  let frozenAmount = null;
+  
+  const memberPhotoHtml = memberPhoto
+    ? `<img src="${memberPhoto}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; vertical-align:middle; margin-right:8px;">`
+    : `<i class="fas fa-user-circle" style="color:#3498db; font-size:28px; vertical-align:middle; margin-right:8px;"></i>`;
+  
   Swal.fire({
     title: 'Rekodi Malipo ya Mkopo',
     html: `
-      <p style="text-align:left; margin-bottom: 10px;">Mwanachama: <strong>${memberName}</strong></p>
-      <p style="text-align:left; margin-bottom: 15px;">Salio linalobaki: <strong>${formatCurrency(balance)}</strong></p>
+      <p style="text-align:left; margin-bottom: 10px; display:flex; align-items:center;">${memberPhotoHtml}Mwanachama: <strong style="margin-left:4px;">${memberName}</strong></p>
+      <p style="text-align:left; margin-bottom: 15px;">Salio linalobaki: <strong id="repaymentModalLiveBalance">${formatCurrency(balance)}</strong></p>
+      <div id="fullPaymentBtnContainer" style="display:none; margin-bottom:12px;">
+        <button type="button" id="fullPaymentBtn" class="btn btn-warning" style="width:100%;">
+          <i class="fas fa-stopwatch"></i> Lipa Kiasi Kamili (Simamisha Ongezeko)
+        </button>
+      </div>
       <input type="number" id="repaymentAmount" class="swal2-input" placeholder="Kiasi cha malipo" min="0" step="0.01">
       <input type="text" id="repaymentNotes" class="swal2-input" placeholder="Maelezo (hiari)">
     `,
     showCancelButton: true,
     confirmButtonText: 'Endelea',
     cancelButtonText: 'Ghairi',
+    didOpen: () => {
+      // Item 1: Salio linalobaki ndani ya modal hii pia liwe "live" (linaongezeka kila
+      // sekunde endapo mkopo umechelewa), sawa kabisa na Jedwali la Madeni
+      if (dueDateStr) {
+        const dueDateMs = new Date(dueDateStr).getTime();
+        if (!isNaN(dueDateMs)) {
+          let latestLiveBalance = rawBalance;
+          
+          const updateLiveBalance = () => {
+            // Item 3: kinga ya ziada - endapo tayari "isFrozen" ni kweli lakini
+            // "interval" bado ipo kwa sababu yoyote (mfano imeondolewa kwa
+            // "clearInterval" lakini "tick" tayari ilikuwa imepangwa), simamisha
+            // hapa pia kwa uhakika WA MARA MBILI (haiwezi kuendelea kuandika
+            // juu ya thamani iliyogandishwa)
+            if (isFrozen) {
+              if (repaymentModalInterval) {
+                clearInterval(repaymentModalInterval);
+                repaymentModalInterval = null;
+              }
+              return;
+            }
+            const liveBalanceEl = document.getElementById('repaymentModalLiveBalance');
+            if (!liveBalanceEl) return;
+            
+            const nowMs = Date.now();
+            const isCurrentlyOverdue = nowMs > dueDateMs && cachedLatePenaltyPercent > 0;
+            const fullPaymentContainer = document.getElementById('fullPaymentBtnContainer');
+            
+            if (isCurrentlyOverdue) {
+              const live = calculateLivePenalty(totalToPay, dueDateMs, nowMs, cachedLatePenaltyPercent, penaltyPaidSoFar);
+              latestLiveBalance = rawBalance + live.outstandingPenalty;
+              liveBalanceEl.textContent = formatCurrency(latestLiveBalance);
+              // Item 1: kwa kuwa bado kipindi cha Ongezeko, onesha button ya "Lipa Kiasi
+              // Kamili" ili mtumiaji asilazimike kuandika kiasi mwenyewe (ambacho
+              // kingekuwa kimepitwa na wakati mara tu anapotuma, kwa kuwa kinaendelea
+              // kuongezeka kila sekunde)
+              if (fullPaymentContainer) fullPaymentContainer.style.display = 'block';
+            } else {
+              latestLiveBalance = rawBalance;
+              if (fullPaymentContainer) fullPaymentContainer.style.display = 'none';
+            }
+          };
+          updateLiveBalance();
+          repaymentModalInterval = setInterval(updateLiveBalance, 1000);
+          
+          // Item 3: "freeze" - simamisha "countup" milele na jaza kiasi kamili.
+          // Kazi hii ni "idempotent" (salama hata ikitokea zaidi ya mara moja kwa
+          // bahati mbaya) na inatumia ".onclick =" (siyo addEventListener) ili
+          // kuhakikisha HAKUNA "listener" zaidi ya moja iliyosajiliwa
+          const freezeAndFillAmount = () => {
+            if (isFrozen) return; // tayari imegandishwa - usifanye tena
+            isFrozen = true;
+            if (repaymentModalInterval) {
+              clearInterval(repaymentModalInterval);
+              repaymentModalInterval = null;
+            }
+            frozenAmount = latestLiveBalance;
+            const amountInput = document.getElementById('repaymentAmount');
+            if (amountInput) amountInput.value = frozenAmount.toFixed(2);
+            const liveBalanceEl = document.getElementById('repaymentModalLiveBalance');
+            if (liveBalanceEl) {
+              liveBalanceEl.textContent = formatCurrency(frozenAmount) + ' (Imesimamishwa)';
+              liveBalanceEl.style.color = '#e67e22';
+            }
+            const fullPaymentBtnNow = document.getElementById('fullPaymentBtn');
+            if (fullPaymentBtnNow) {
+              fullPaymentBtnNow.disabled = true;
+              fullPaymentBtnNow.innerHTML = '<i class="fas fa-check"></i> Ongezeko Limesimamishwa';
+            }
+            showQuickNotification('Ongezeko limesimamishwa. Kiasi kamili kimejazwa kiotomatiki.');
+          };
+          
+          const fullPaymentBtn = document.getElementById('fullPaymentBtn');
+          if (fullPaymentBtn) {
+            fullPaymentBtn.onclick = freezeAndFillAmount;
+          }
+        }
+      }
+    },
+    willClose: () => {
+      if (repaymentModalInterval) {
+        clearInterval(repaymentModalInterval);
+        repaymentModalInterval = null;
+      }
+    },
     preConfirm: () => {
       const amount = document.getElementById('repaymentAmount').value;
       const notes = document.getElementById('repaymentNotes').value;
@@ -11857,19 +13581,23 @@ function openLoanRepaymentModal(loanId, memberName, balance) {
         Swal.showValidationMessage('Tafadhali weka kiasi sahihi');
         return false;
       }
-      return { amount: amount, notes: notes };
+      return { amount: amount, notes: notes, isFullPayment: isFrozen, displayBalance: isFrozen ? frozenAmount : balance };
     }
   }).then((result) => {
+    if (repaymentModalInterval) {
+      clearInterval(repaymentModalInterval);
+      repaymentModalInterval = null;
+    }
     if (result.isConfirmed) {
-      confirmAndFinalizeLoanRepayment(loanId, memberName, balance, result.value.amount, result.value.notes);
+      confirmAndFinalizeLoanRepayment(loanId, memberName, result.value.displayBalance, result.value.amount, result.value.notes, result.value.isFullPayment);
     }
   });
 }
 
 // Ujumbe wa kuthibitisha wa kisasa kabla ya kusajili malipo ya mkopo
-function confirmAndFinalizeLoanRepayment(loanId, memberName, balance, amount, notes) {
+function confirmAndFinalizeLoanRepayment(loanId, memberName, balance, amount, notes, isFullPayment) {
   const newBalance = Math.max(0, balance - parseFloat(amount));
-  const willComplete = newBalance <= 0;
+  const willComplete = isFullPayment || newBalance <= 0;
   
   Swal.fire({
     title: 'Thibitisha Malipo',
@@ -11918,7 +13646,8 @@ function confirmAndFinalizeLoanRepayment(loanId, memberName, balance, amount, no
           dbId: currentDbId,
           loanId: loanId,
           amount: amount,
-          notes: notes
+          notes: notes,
+          fullPayment: isFullPayment === true
         })
       })
       .then(res => res.json())
@@ -11959,12 +13688,8 @@ function loadSavingsOverview() {
     
     const s = data.summary;
     document.getElementById('savTotalMembers').textContent = s.totalMembers || 0;
-    document.getElementById('savTotalSavings').textContent = formatCurrency(s.totalSavings);
-    document.getElementById('savTotalShares').textContent = formatCurrency(s.totalShares);
     document.getElementById('savTotalLoanedOut').textContent = formatCurrency(s.totalLoanedOut);
-    document.getElementById('savInterestCollected').textContent = formatCurrency(s.interestCollected);
     document.getElementById('savExpectedInterest').textContent = formatCurrency(s.expectedInterestOnActiveLoans);
-    document.getElementById('savFinesCollected').textContent = formatCurrency(s.finesCollected);
     document.getElementById('savTotalExcludingLoans').textContent = formatCurrency(s.totalCollectedExcludingLoans);
     document.getElementById('savTotalWithLoans').textContent = formatCurrency(s.totalWithActiveLoans);
     
@@ -12494,11 +14219,16 @@ function renderSavingsTransactionsGrouped() {
   const thead = table.querySelector('thead');
   const tbody = table.querySelector('tbody');
   
+  // Item 3: Jedwali la Matumizi pekee lina column ya "Mfuko" - Mapato haliguswi
+  const isExpenseTab = currentSavingsTab === 'Expense';
+  const colCount = isExpenseTab ? 7 : 6;
+  
   thead.innerHTML = `
     <tr>
       <th>ID</th>
       <th>Mwanachama/Maelezo</th>
       <th>Kategoria</th>
+      ${isExpenseTab ? '<th>Mfuko</th>' : ''}
       <th>Kiasi</th>
       <th>Hali</th>
       <th>Vitendo</th>
@@ -12512,7 +14242,7 @@ function renderSavingsTransactionsGrouped() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" style="text-align: center; padding: 20px; color: #666;">
+        <td colspan="${colCount}" style="text-align: center; padding: 20px; color: #666;">
           <i class="fas fa-receipt"></i> Hakuna miamala
         </td>
       </tr>
@@ -12555,7 +14285,7 @@ function renderSavingsTransactionsGrouped() {
     
     html += `
       <tr>
-        <td colspan="6" style="font-weight: 700; padding: 10px 12px; background: #eef2f6; color: #2c3e50; font-size: 13px; letter-spacing: 0.3px;">
+        <td colspan="${colCount}" style="font-weight: 700; padding: 10px 12px; background: #eef2f6; color: #2c3e50; font-size: 13px; letter-spacing: 0.3px;">
           ${tabLabel} YA TAREHE ${dateLabel}
         </td>
       </tr>
@@ -12586,6 +14316,7 @@ function renderSavingsTransactionsGrouped() {
           <td><small title="${fullId}">${shortId}</small></td>
           <td>${displayName}</td>
           <td>${t.Category || ''}</td>
+          ${isExpenseTab ? `<td>${t.Fund || '-'}</td>` : ''}
           <td class="${amountClass}">${amountPrefix} ${formatCurrency(t.Amount)}</td>
           <td><span class="status-badge ${statusClass}">${status}</span></td>
           <td>
