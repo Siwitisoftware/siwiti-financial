@@ -4313,7 +4313,7 @@ tr:hover {
 
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-EI_0iFDMrWH7ApSIeKmOwVQao8mehbpr7Tz6Brb2sFzBtwPl39rAizrNJ2IZAob0/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyU9wWB_pS3buMna_uplTwhd3aUOatABUsA1nfaBSBJDLNe4i2IO9BLZx6bnMrOa8QZ/exec";
     
     // Item 2: "fetch" yenye "timeout" - inatumika badala ya "fetch" ya kawaida kila
     // mahali panapowasiliana na "server". Kwenye mtandao hafifu (2G n.k), "fetch" ya
@@ -5003,7 +5003,14 @@ function memberPortalLogout() {
   localStorage.removeItem('memberDbId');
   localStorage.removeItem('memberId');
   localStorage.removeItem('memberName');
+  localStorage.removeItem('memberEmail');
   localStorage.removeItem('memberLoggedIn');
+  // MUHIMU: futa "cache" ya Akaunti Zinazojulikana pia - vinginevyo mtumiaji
+  // akiingia baadaye na barua pepe TOFAUTI, bado angeona akaunti za barua pepe
+  // ya awali kwenye "dropdown" ya kubadilisha akaunti
+  localStorage.removeItem('memberKnownAccounts');
+  mpDiscoverableOrgsCache = null;
+  mpLastData = null;
   const overlay = document.getElementById('memberPortalOverlay');
   if (overlay) overlay.remove();
   const detailOverlay = document.getElementById('mpDetailOverlay');
@@ -6414,6 +6421,15 @@ function loginAsMember() {
   .then(data => {
     Notiflix.Loading.remove();
     if (data.status === 'success') {
+      // Ulinzi wa ziada: endapo barua pepe hii MPYA ni TOFAUTI na iliyokuwepo
+      // awali kwenye kifaa (mfano mtumiaji hakubonyeza "Toka" kabla ya kuingia
+      // na akaunti nyingine), futa "cache" ya zamani KABLA ya kuendelea
+      const previousEmail = localStorage.getItem('memberEmail');
+      if (previousEmail && data.memberEmail && previousEmail.toLowerCase() !== data.memberEmail.toLowerCase()) {
+        localStorage.removeItem('memberKnownAccounts');
+        mpDiscoverableOrgsCache = null;
+      }
+      
       localStorage.setItem('memberDbId', data.dbId);
       localStorage.setItem('memberId', data.memberId);
       localStorage.setItem('memberName', data.memberName);
