@@ -10,7 +10,7 @@
 // muundo mkubwa wa faili (mfano kuongeza/kuondoa faili kwenye APP_SHELL), badilisha namba ya
 // CACHE_NAME hapa chini (mfano kutoka v1 kwenda v2) ili kulazimisha kusafisha cache za zamani.
 
-const CACHE_NAME = 'mfumo-wa-fedha-v1.4';
+const CACHE_NAME = 'mfumo-wa-fedha-v1';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -20,14 +20,32 @@ const APP_SHELL = [
   '/icons/apple-touch-icon.png'
 ];
 
-// Install: hifadhi app-shell kwenye cache
+// Install: hifadhi app-shell kwenye cache - FAILI MOJA BAADA YA JINGINE (siyo
+// "cache.addAll" ya pamoja), ili tuweze kutuma "progress" HALISI kwa ukurasa
+// (SW_INSTALL_PROGRESS) - hii inaruhusu "progress bar" ya ukurasa kuonesha hatua
+// za kweli za usakinishaji badala ya kuiga tu
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .catch(() => {
-        // Endapo baadhi ya faili hazipo (mfano jina tofauti la index), usisimamishe install
-      })
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const total = APP_SHELL.length;
+      let done = 0;
+      for (const url of APP_SHELL) {
+        try {
+          await cache.add(url);
+        } catch (e) {
+          // Endapo faili moja halikupatikana (mfano jina tofauti la index),
+          // usisimamishe usakinishaji - endelea na yanayofuata
+        }
+        done++;
+        try {
+          const clients = await self.clients.matchAll({ type: 'window' });
+          clients.forEach((client) => client.postMessage({ type: 'SW_INSTALL_PROGRESS', done, total }));
+        } catch (e) {
+          // Kutuma ujumbe kumeshindwa - haizuii usakinishaji kuendelea
+        }
+      }
+    })()
   );
   self.skipWaiting();
 });
