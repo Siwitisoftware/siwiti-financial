@@ -4313,7 +4313,7 @@ tr:hover {
 
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyU9wWB_pS3buMna_uplTwhd3aUOatABUsA1nfaBSBJDLNe4i2IO9BLZx6bnMrOa8QZ/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyK_BNY-0R2iVd8oHvEAGKmSfKROCD0xRR_qyE9hrjScw1LydIfJOg527Hc-m3DINwh/exec";
     
     // Item 2: "fetch" yenye "timeout" - inatumika badala ya "fetch" ya kawaida kila
     // mahali panapowasiliana na "server". Kwenye mtandao hafifu (2G n.k), "fetch" ya
@@ -19494,10 +19494,14 @@ function deleteTransactionsInBatches(password, totalTransactions) {
             console.error('Service worker registration failed:', err);
           });
 
-        // Ujumbe kutoka kwa service worker unaposema toleo jipya limewekwa
+        // Ujumbe kutoka kwa service worker unaposema toleo jipya limewekwa, au
+        // kutoa "progress" halisi ya usakinishaji (SW_INSTALL_PROGRESS)
         navigator.serviceWorker.addEventListener('message', function(event) {
           if (event.data && event.data.type === 'SW_UPDATED') {
             notifyAppUpdated();
+          } else if (event.data && event.data.type === 'SW_INSTALL_PROGRESS') {
+            swRealInstallProgress = { done: event.data.done, total: event.data.total };
+            updateSwProgressBarIfActive();
           }
         });
       });
@@ -19509,16 +19513,103 @@ function deleteTransactionsInBatches(password, totalTransactions) {
       if (appUpdateNotified) return;
       appUpdateNotified = true;
 
-      if (typeof Notiflix !== 'undefined' && Notiflix.Report) {
-        Notiflix.Report.info(
-          'Toleo Jipya Limepatikana',
-          'Mfumo umeboreshwa. Bofya "Pakua Upya" ili kuona mabadiliko mapya.',
-          'Pakua Upya',
-          function() { window.location.reload(); }
-        );
-      } else {
-        window.location.reload();
-      }
+      Swal.fire({
+        title: 'Toleo Jipya Limepatikana',
+        html: '<p style="font-size:14px; color:#666; margin:0;">Mfumo umeboreshwa. Bofya "Pakua" ili kuona mabadiliko mapya.</p>',
+        icon: 'info',
+        confirmButtonText: 'Pakua',
+        showCancelButton: true,
+        cancelButtonText: 'Baadaye',
+        allowOutsideClick: false
+      }).then(function(result) {
+        if (result.isConfirmed) {
+          startAppUpdateProgress();
+        } else {
+          // Mruhusu kuombwa tena baadaye (mfano akifungua "tab" nyingine)
+          appUpdateNotified = false;
+        }
+      });
+    }
+
+    // Onesha "progress bar" ya kusakinisha toleo jipya, kisha ujumbe wa mafanikio,
+    // kisha upakie ukurasa upya. Inatumia "progress" HALISI kutoka kwa service
+    // worker (SW_INSTALL_PROGRESS) endapo bado inaendelea, la sivyo inaonesha
+    // mwendo laini wa kuiga (kwa kuwa usakinishaji kwa kawaida huisha haraka sana,
+    // kabla mtumiaji hajaona arifa hii)
+    let swRealInstallProgress = null;
+    let swProgressBarActive = false;
+
+    function updateSwProgressBarIfActive() {
+      if (!swProgressBarActive || !swRealInstallProgress) return;
+      const barEl = document.getElementById('swUpdateProgressBar');
+      const labelEl = document.getElementById('swUpdateProgressLabel');
+      const pct = Math.min(100, Math.round((swRealInstallProgress.done / swRealInstallProgress.total) * 100));
+      if (barEl) barEl.style.width = pct + '%';
+      if (labelEl) labelEl.textContent = pct + '%';
+    }
+
+    function startAppUpdateProgress() {
+      let progress = (swRealInstallProgress && swRealInstallProgress.total > 0)
+        ? Math.round((swRealInstallProgress.done / swRealInstallProgress.total) * 100)
+        : 0;
+      const alreadyComplete = swRealInstallProgress && swRealInstallProgress.done >= swRealInstallProgress.total;
+      swProgressBarActive = true;
+      
+      Swal.fire({
+        title: 'Inasakinisha Toleo Jipya...',
+        html: `
+          <div style="background:#eee; border-radius:8px; overflow:hidden; height:14px; margin:18px 0 8px;">
+            <div id="swUpdateProgressBar" style="background:linear-gradient(135deg,#3498db,#2874a6); height:100%; width:${progress}%; transition:width 0.25s ease; border-radius:8px;"></div>
+          </div>
+          <p id="swUpdateProgressLabel" style="font-size:13px; color:#666; margin:0;">${progress}%</p>
+        `,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: function() {
+          const barEl = document.getElementById('swUpdateProgressBar');
+          const labelEl = document.getElementById('swUpdateProgressLabel');
+          
+          function finish() {
+            swProgressBarActive = false;
+            clearInterval(interval);
+            if (barEl) barEl.style.width = '100%';
+            if (labelEl) labelEl.textContent = '100%';
+            setTimeout(function() {
+              Swal.fire({
+                title: 'Imefanikiwa!',
+                html: '<p style="font-size:14px; color:#666; margin:0;">Toleo jipya limesakinishwa kikamilifu.</p>',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false,
+                allowOutsideClick: false
+              }).then(function() {
+                window.location.reload();
+              });
+            }, 300);
+          }
+          
+          // Endapo usakinishaji ulishaisha KABLA ya arifa hii kuonekana (hali ya
+          // kawaida - inatokea haraka sana), toa mwendo mfupi wa kuiga tu kwa
+          // uzoefu mzuri, kisha kamilisha
+          const interval = setInterval(function() {
+            if (swRealInstallProgress && !alreadyComplete) {
+              // "Progress" halisi inayoendelea kupokelewa - endelea kusubiri hadi ikamilike
+              if (swRealInstallProgress.done >= swRealInstallProgress.total) {
+                finish();
+              }
+              return;
+            }
+            progress += Math.random() * 18 + 8; // hatua zisizo sawa, kama upakiaji halisi
+            if (progress >= 100) {
+              finish();
+              return;
+            }
+            if (barEl) barEl.style.width = progress + '%';
+            if (labelEl) labelEl.textContent = Math.round(progress) + '%';
+          }, 200);
+        }
+      });
     }
     
   </script>
