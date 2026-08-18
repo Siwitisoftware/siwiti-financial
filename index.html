@@ -1891,8 +1891,14 @@ tr:hover {
             <div class="input-group">
               <label for="memberRegPassword"><i class="fas fa-lock"></i> Nenosiri</label>
               <div class="password-wrapper">
-                <input type="password" id="memberRegPassword" placeholder="weka nenosiri lako">
+                <input type="password" id="memberRegPassword" placeholder="angalau herufi 8: herufi kubwa, ndogo na namba" oninput="checkPasswordStrength(this.value, 'memberPasswordStrengthFill', 'memberPasswordStrengthText')">
                 <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('memberRegPassword', this)"></i>
+              </div>
+              <div class="password-strength-wrapper">
+                <div class="password-strength-bar">
+                  <div class="password-strength-bar-fill" id="memberPasswordStrengthFill"></div>
+                </div>
+                <small class="password-strength-text" id="memberPasswordStrengthText">Weka nenosiri kuona hali yake</small>
               </div>
             </div>
             
@@ -4260,7 +4266,13 @@ tr:hover {
     
     <div class="input-group">
       <label for="newPassword"><i class="fas fa-lock"></i> Nenosiri Jipya</label>
-      <input type="password" id="newPassword" placeholder="Weka nenosiri jipya">
+      <input type="password" id="newPassword" placeholder="angalau herufi 8: herufi kubwa, ndogo na namba" oninput="checkPasswordStrength(this.value, 'changePwdStrengthFill', 'changePwdStrengthText')">
+      <div class="password-strength-wrapper">
+        <div class="password-strength-bar">
+          <div class="password-strength-bar-fill" id="changePwdStrengthFill"></div>
+        </div>
+        <small class="password-strength-text" id="changePwdStrengthText">Weka nenosiri kuona hali yake</small>
+      </div>
     </div>
     
     <div class="input-group">
@@ -4313,7 +4325,7 @@ tr:hover {
 
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyK_BNY-0R2iVd8oHvEAGKmSfKROCD0xRR_qyE9hrjScw1LydIfJOg527Hc-m3DINwh/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJ7rXh3c47z1RTdph8iLsAwTqQw2YwrFKm8v8m1e0e6GsiA2FumrbhWhRWRpDWA8cR/exec";
     
     // Item 2: "fetch" yenye "timeout" - inatumika badala ya "fetch" ya kawaida kila
     // mahali panapowasiliana na "server". Kwenye mtandao hafifu (2G n.k), "fetch" ya
@@ -4408,9 +4420,9 @@ function initializeTransactionForm() {
         /[0-9]/.test(password);
     }
 
-    function checkPasswordStrength(password) {
-      const fill = document.getElementById('passwordStrengthFill');
-      const text = document.getElementById('passwordStrengthText');
+    function checkPasswordStrength(password, fillId, textId) {
+      const fill = document.getElementById(fillId || 'passwordStrengthFill');
+      const text = document.getElementById(textId || 'passwordStrengthText');
       if (!fill || !text) return;
 
       if (!password) {
@@ -4917,14 +4929,20 @@ function mpQuickAddAccountUI(dbId, orgName) {
   Swal.fire({
     title: 'Ongeza Akaunti - ' + orgName,
     html: `<p style="text-align:left; font-size:13px; color:#666;">Weka Nenosiri utakalotumia kwa akaunti ya Kikundi hiki.</p>
-      <input type="password" id="mpQuickAddPassword" class="swal2-input" placeholder="Nenosiri Jipya">`,
+      <input type="password" id="mpQuickAddPassword" class="swal2-input" placeholder="angalau herufi 8: herufi kubwa, ndogo na namba" oninput="checkPasswordStrength(this.value, 'mpQuickAddStrengthFill', 'mpQuickAddStrengthText')">
+      <div class="password-strength-wrapper" style="text-align:left;">
+        <div class="password-strength-bar">
+          <div class="password-strength-bar-fill" id="mpQuickAddStrengthFill"></div>
+        </div>
+        <small class="password-strength-text" id="mpQuickAddStrengthText">Weka nenosiri kuona hali yake</small>
+      </div>`,
     showCancelButton: true,
     confirmButtonText: 'Ongeza Akaunti',
     cancelButtonText: 'Ghairi',
     preConfirm: () => {
       const pwd = document.getElementById('mpQuickAddPassword').value;
-      if (!pwd || pwd.length < 4) {
-        Swal.showValidationMessage('Nenosiri liwe angalau herufi/tarakimu 4');
+      if (!isPasswordValid(pwd)) {
+        Swal.showValidationMessage('Nenosiri liwe angalau herufi 8 likiwa na mchanganyiko wa herufi kubwa, ndogo na namba');
         return false;
       }
       return pwd;
@@ -5648,7 +5666,13 @@ function showMemberChangePasswordForm() {
     title: 'Badilisha Nenosiri',
     html: `
       <input type="password" id="mpCurrentPwd" class="swal2-input" placeholder="Nenosiri la sasa">
-      <input type="password" id="mpNewPwd" class="swal2-input" placeholder="Nenosiri jipya">
+      <input type="password" id="mpNewPwd" class="swal2-input" placeholder="angalau herufi 8: herufi kubwa, ndogo na namba" oninput="checkPasswordStrength(this.value, 'mpPwdStrengthFill', 'mpPwdStrengthText')">
+      <div class="password-strength-wrapper" style="text-align:left;">
+        <div class="password-strength-bar">
+          <div class="password-strength-bar-fill" id="mpPwdStrengthFill"></div>
+        </div>
+        <small class="password-strength-text" id="mpPwdStrengthText">Weka nenosiri kuona hali yake</small>
+      </div>
     `,
     showCancelButton: true,
     confirmButtonText: 'Badilisha',
@@ -5658,6 +5682,10 @@ function showMemberChangePasswordForm() {
       const newPassword = document.getElementById('mpNewPwd').value;
       if (!currentPassword || !newPassword) {
         Swal.showValidationMessage('Tafadhali jaza sehemu zote');
+        return false;
+      }
+      if (!isPasswordValid(newPassword)) {
+        Swal.showValidationMessage('Nenosiri jipya liwe angalau herufi 8 likiwa na mchanganyiko wa herufi kubwa, ndogo na namba');
         return false;
       }
       return { currentPassword, newPassword };
@@ -7551,8 +7579,6 @@ function updateRecentTransactionsTable(transactions) {
       const row = tbody.insertRow();
       
       const fullTransactionId = transaction['Transaction ID'];
-      const shortTransactionId = fullTransactionId.length > 8 ? 
-        '...' + fullTransactionId.slice(-6) : fullTransactionId;
       
       const amountClass = transaction['Transaction Type'] === 'Income' ? 'amount-income' : 'amount-expense';
       const amountPrefix = transaction['Transaction Type'] === 'Income' ? '+' : '-';
@@ -7562,7 +7588,7 @@ function updateRecentTransactionsTable(transactions) {
       const dateStr = date.toLocaleDateString('sw-TZ');
       
       row.innerHTML = `
-        <td><small>${shortTransactionId}</small></td>
+        <td><small>${fullTransactionId}</small></td>
         <td>${transaction['Transaction Type']}</td>
         <td class="${amountClass}">${amountPrefix} ${formatCurrency(transaction.Amount)}</td>
         <td><small>${dateStr}</small></td>
@@ -7595,8 +7621,6 @@ function updateRecentTransactionsTable(transactions) {
         const row = tbody.insertRow();
         
         const fullTransactionId = transaction['Transaction ID'];
-        const shortTransactionId = fullTransactionId.length > 8 ? 
-          '...' + fullTransactionId.slice(-6) : fullTransactionId;
         
         const amountClass = transaction['Transaction Type'] === 'Income' ? 'amount-income' : 'amount-expense';
         const amountPrefix = transaction['Transaction Type'] === 'Income' ? '+' : '-';
@@ -7633,7 +7657,7 @@ function updateRecentTransactionsTable(transactions) {
                            (transaction.Description ? 'Maelezo: ' + transaction.Description : 'Hakuna maelezo');
         
         row.innerHTML = `
-          <td><small>${shortTransactionId}</small></td>
+          <td><small>${fullTransactionId}</small></td>
           <td>${displayName}</td>
           <td>${transaction['Transaction Type']}</td>
           <td class="${amountClass}">${amountPrefix} ${formatCurrency(transaction.Amount)}</td>
@@ -7649,8 +7673,6 @@ function updateRecentTransactionsTable(transactions) {
         const row = tbody.insertRow();
         
         const fullTransactionId = transaction['Transaction ID'];
-        const shortTransactionId = fullTransactionId.length > 8 ? 
-          '...' + fullTransactionId.slice(-6) : fullTransactionId;
         
         const amountClass = transaction['Transaction Type'] === 'Income' ? 'amount-income' : 'amount-expense';
         const amountPrefix = transaction['Transaction Type'] === 'Income' ? '+' : '-';
@@ -7663,7 +7685,7 @@ function updateRecentTransactionsTable(transactions) {
                            (transaction.Description ? 'Maelezo: ' + transaction.Description : 'Hakuna maelezo');
         
         row.innerHTML = `
-          <td><small>${shortTransactionId}</small></td>
+          <td><small>${fullTransactionId}</small></td>
           <td>${displayName}</td>
           <td>${transaction['Transaction Type']}</td>
           <td class="${amountClass}">${amountPrefix} ${formatCurrency(transaction.Amount)}</td>
@@ -8626,8 +8648,6 @@ function updateMembersTable(members) {
         const row = tbody.insertRow();
         
         const fullMemberId = member['Member ID'];
-        const shortMemberId = fullMemberId.length > 8 ? 
-          '...' + fullMemberId.slice(-6) : fullMemberId;
         
         const joinDate = new Date(member['Join Date']);
         const joinDateStr = joinDate.toLocaleDateString('sw-TZ');
@@ -8641,7 +8661,7 @@ function updateMembersTable(members) {
         
         row.innerHTML = `
           <td>${photoCell}</td>
-          <td><small title="${fullMemberId}">${shortMemberId}</small></td>
+          <td><small>${fullMemberId}</small></td>
           <td>${member['Full Name']}</td>
           <td>${member.Email || '-'}</td>
           <td>${member.Phone || '-'}</td>
@@ -9905,8 +9925,6 @@ function loadCachedTransactions() {
       const row = tbody.insertRow();
       
       const fullTransactionId = transaction['Transaction ID'];
-      const shortTransactionId = fullTransactionId.length > 8 ? 
-        '...' + fullTransactionId.slice(-6) : fullTransactionId;
       
       const amountClass = transaction['Transaction Type'] === 'Income' ? 'amount-income' : 'amount-expense';
       const amountPrefix = transaction['Transaction Type'] === 'Income' ? '+' : '-';
@@ -9917,7 +9935,7 @@ function loadCachedTransactions() {
       
       row.innerHTML = `
         <td>
-          <small title="${fullTransactionId}">${shortTransactionId}</small>
+          <small>${fullTransactionId}</small>
         </td>
         <td>${transaction['Transaction Type']}</td>
         <td>${transaction.Category}</td>
@@ -9962,8 +9980,6 @@ function loadCachedTransactions() {
         const row = tbody.insertRow();
         
         const fullTransactionId = transaction['Transaction ID'];
-        const shortTransactionId = fullTransactionId.length > 8 ? 
-          '...' + fullTransactionId.slice(-6) : fullTransactionId;
         
         const amountClass = transaction['Transaction Type'] === 'Income' ? 'amount-income' : 'amount-expense';
         const amountPrefix = transaction['Transaction Type'] === 'Income' ? '+' : '-';
@@ -10001,7 +10017,7 @@ function loadCachedTransactions() {
         
         row.innerHTML = `
           <td>
-            <small title="${fullTransactionId}">${shortTransactionId}</small>
+            <small>${fullTransactionId}</small>
           </td>
           <td>${displayName}</td>
           <td>${transaction['Transaction Type']}</td>
@@ -10030,8 +10046,6 @@ function loadCachedTransactions() {
         const row = tbody.insertRow();
         
         const fullTransactionId = transaction['Transaction ID'];
-        const shortTransactionId = fullTransactionId.length > 8 ? 
-          '...' + fullTransactionId.slice(-6) : fullTransactionId;
         
         const amountClass = transaction['Transaction Type'] === 'Income' ? 'amount-income' : 'amount-expense';
         const amountPrefix = transaction['Transaction Type'] === 'Income' ? '+' : '-';
@@ -10045,7 +10059,7 @@ function loadCachedTransactions() {
         
         row.innerHTML = `
           <td>
-            <small title="${fullTransactionId}">${shortTransactionId}</small>
+            <small>${fullTransactionId}</small>
           </td>
           <td>${displayName}</td>
           <td>${transaction['Transaction Type']}</td>
@@ -12768,6 +12782,10 @@ function registerAsMember() {
   
   if (!identifier || !password) {
     Notiflix.Notify.failure('Tafadhali jaza Barua Pepe/Namba ya Mwanachama na Nenosiri');
+    return;
+  }
+  if (!isPasswordValid(password)) {
+    Notiflix.Notify.failure('Nenosiri lazima liwe angalau herufi 8 likiwa na mchanganyiko wa herufi kubwa, ndogo na namba');
     return;
   }
   if (!agreedToTerms) {
