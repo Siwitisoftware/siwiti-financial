@@ -3579,6 +3579,14 @@ tr:hover {
     </div>
   </div>
   
+  <!-- Item: Hali ya "Plan" (Muda wa Matumizi) -->
+  <div class="chart-container" id="planStatusCard" style="border-left: 4px solid #94a3b8;">
+    <h4><i class="fas fa-hourglass-half"></i> Hali ya Akaunti Yako (Plan)</h4>
+    <div id="planStatusContent" style="font-size:14px; color:#555;">
+      <i class="fas fa-spinner fa-spin"></i> Inapakia...
+    </div>
+  </div>
+  
   <!-- Organization Settings -->
   <div class="chart-container">
     <h4><i class="fas fa-building"></i> Mipangilio ya Shirika</h4>
@@ -4325,7 +4333,7 @@ tr:hover {
 
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0v52yiecT322WAYNZUybIbHcFnYBHlaWjroWbfAaqfabwDWz9hYj-HW63F6AnKuta/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxXK-mUT2ad8Gp7_dCWq8BRPmeCnGcbpiIjQvI9Na8COs-hS5fGd-CRoQTcTz_0JhJM/exec";
     
     // Item 2: "fetch" yenye "timeout" - inatumika badala ya "fetch" ya kawaida kila
     // mahali panapowasiliana na "server". Kwenye mtandao hafifu (2G n.k), "fetch" ya
@@ -4338,7 +4346,33 @@ tr:hover {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       const opts = Object.assign({}, options, { signal: controller.signal });
-      return fetch(url, opts).finally(() => clearTimeout(timeoutId));
+      return fetch(url, opts).finally(() => clearTimeout(timeoutId)).then(res => {
+        // Item: Ukaguzi wa "Plan" (kituo kimoja kikuu) - "clone" ya jibu
+        // inatumika kuchungulia bila kuathiri "res.json()" ya kawaida
+        // itakayoitwa na "function" iliyoita hii - kila mahali kunaendelea
+        // kufanya kazi kama kawaida, lakini sasa na arifa ya ziada, dhahiri
+        // (Swal) endapo "Plan" imeisha muda
+        try {
+          res.clone().json().then(data => {
+            if (data && data.planExpired) {
+              showPlanExpiredAlert();
+            }
+          }).catch(() => {});
+        } catch (e) {}
+        return res;
+      });
+    }
+    
+    let planExpiredAlertShowing = false;
+    function showPlanExpiredAlert() {
+      if (planExpiredAlertShowing) return; // usionekane mara kadhaa kwa wakati mmoja
+      planExpiredAlertShowing = true;
+      Swal.fire({
+        title: 'Muda wa Matumizi Umeisha',
+        html: '<p>Muda wa matumizi ya bure (au Plan yako) umeisha. Shughuli za msingi (Wanachama, Miamala, Mikopo) hazitafanya kazi mpaka malipo yafanyike.</p><p style="font-size:13px; color:#888;">Wasiliana na msimamizi wa mfumo kufanya malipo na kuendelea kutumia mfumo.</p>',
+        icon: 'warning',
+        confirmButtonText: 'Nimeelewa'
+      }).then(() => { planExpiredAlertShowing = false; });
     }
     let currentDbId = null;
     let currentOrganization = '';
@@ -4353,6 +4387,7 @@ Notiflix.Loading.init({
   messageColor: '#fff',
   messageFontSize: '16px',
   svgSize: '0px', // Hide spinner
+  zindex: 999999,
 });
 
 Notiflix.Notify.init({
@@ -4361,6 +4396,7 @@ Notiflix.Notify.init({
   distance: '10px',
   timeout: 3000,
   clickToClose: true,
+  zindex: 999999,
 });
     
     // Initialize background updates when page loads
@@ -4657,6 +4693,866 @@ function adjustStatsGridForAccountType() {
 let mpDbId = null;
 let mpMemberId = null;
 let mpLastData = null;
+
+// ============ DEVELOPER PORTAL ============
+// Muonekano wa kisasa (mandhari ya giza) - tofauti kabisa na Dashibodi ya kawaida,
+// ili kuonesha wazi kuwa hii ni sehemu MAALUM. Barua pepe ya Developer HAIONEKANI
+// hapa popote - "backend" ndiyo pekee inayojua ni akaunti gani ya Developer;
+// "frontend" inatambua TU "userType: developer" iliyorudishwa baada ya "login".
+let devCurrentTab = 'accounts';
+let devAccountsCache = [];
+let devActivitiesCache = [];
+let devRecycleBinCache = [];
+
+function showDeveloperPortal() {
+  const existingOverlay = document.getElementById('developerPortalOverlay');
+  if (existingOverlay) existingOverlay.remove();
+  
+  const overlay = document.createElement('div');
+  overlay.id = 'developerPortalOverlay';
+  overlay.innerHTML = `
+    <style>
+      #developerPortalOverlay {
+        position: fixed; inset: 0; z-index: 999;
+        background: linear-gradient(160deg, #0b0f1e 0%, #1a1443 100%);
+        color: #e2e8f0; overflow-y: auto;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+      }
+      #developerPortalOverlay .dp-header {
+        position: sticky; top: 0; z-index: 10;
+        background: rgba(11, 15, 30, 0.85); backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+        padding: 16px 20px; display: flex; align-items: center; gap: 14px;
+      }
+      #developerPortalOverlay .dp-logo {
+        width: 42px; height: 42px; border-radius: 12px;
+        background: linear-gradient(135deg, #6366f1, #a855f7);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 19px; color: #fff; box-shadow: 0 4px 18px rgba(139, 92, 246, 0.45);
+        flex-shrink: 0;
+      }
+      #developerPortalOverlay .dp-title { flex: 1; min-width: 0; }
+      #developerPortalOverlay .dp-title h2 { margin: 0; font-size: 16px; font-weight: 800; color: #fff; letter-spacing: 0.3px; }
+      #developerPortalOverlay .dp-title p { margin: 2px 0 0; font-size: 11px; color: #a5b4fc; }
+      #developerPortalOverlay .dp-logout {
+        background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3);
+        padding: 9px 15px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 700;
+        flex-shrink: 0;
+      }
+      #developerPortalOverlay .dp-tabs {
+        display: flex; gap: 6px; padding: 14px 20px 0; overflow-x: auto; max-width: 1100px; margin: 0 auto;
+      }
+      #developerPortalOverlay .dp-tab {
+        background: transparent; border: none; color: #94a3b8;
+        padding: 11px 18px; border-radius: 12px 12px 0 0; cursor: pointer;
+        font-size: 13px; font-weight: 700; white-space: nowrap;
+        border-bottom: 2px solid transparent; transition: all 0.15s ease;
+      }
+      #developerPortalOverlay .dp-tab.active {
+        color: #fff; background: rgba(139, 92, 246, 0.15);
+        border-bottom: 2px solid #a855f7;
+      }
+      #developerPortalOverlay .dp-content { padding: 20px; max-width: 1100px; margin: 0 auto; }
+      #developerPortalOverlay .dp-stat-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px; margin-bottom: 20px;
+      }
+      #developerPortalOverlay .dp-stat-card {
+        background: rgba(30, 27, 75, 0.5); border: 1px solid rgba(148,163,184,0.14);
+        border-radius: 16px; padding: 16px;
+      }
+      #developerPortalOverlay .dp-stat-card .num { font-size: 24px; font-weight: 800; color: #fff; }
+      #developerPortalOverlay .dp-stat-card .label { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+      #developerPortalOverlay .dp-account-card {
+        background: rgba(30, 27, 75, 0.5); border: 1px solid rgba(148,163,184,0.14);
+        border-radius: 16px; padding: 16px; margin-bottom: 12px;
+      }
+      #developerPortalOverlay .dp-account-card h4 { margin: 0 0 6px; color: #fff; font-size: 14.5px; font-weight: 700; }
+      #developerPortalOverlay .dp-account-card .meta { font-size: 12px; color: #94a3b8; line-height: 1.9; }
+      #developerPortalOverlay .dp-badge {
+        display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 800;
+        background: rgba(139, 92, 246, 0.18); color: #c4b5fd; margin-left: 6px; vertical-align: middle;
+      }
+      #developerPortalOverlay .dp-btn {
+        border: none; border-radius: 9px; padding: 8px 13px; font-size: 11.5px; font-weight: 700;
+        cursor: pointer; margin-top: 10px; margin-right: 8px;
+      }
+      #developerPortalOverlay .dp-btn-danger { background: rgba(239,68,68,0.15); color: #fca5a5; }
+      #developerPortalOverlay .dp-btn-warning { background: rgba(245,158,11,0.15); color: #fcd34d; }
+      #developerPortalOverlay .dp-activity-row {
+        display: flex; gap: 12px; padding: 11px 0; border-bottom: 1px solid rgba(148,163,184,0.08);
+      }
+      #developerPortalOverlay .dp-activity-dot {
+        width: 8px; height: 8px; border-radius: 50%; background: #a855f7; margin-top: 6px; flex-shrink: 0;
+        box-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+      }
+      #developerPortalOverlay .dp-empty { text-align: center; padding: 50px 20px; color: #64748b; font-size: 13px; }
+      #developerPortalOverlay input {
+        width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid rgba(148,163,184,0.25);
+        background: rgba(11,15,30,0.6); color: #fff; margin-bottom: 10px; font-size: 13px;
+      }
+      #developerPortalOverlay input::placeholder { color: #64748b; }
+    </style>
+    <div class="dp-header">
+      <div class="dp-logo"><i class="fas fa-terminal"></i></div>
+      <div class="dp-title">
+        <h2>Developer Panel</h2>
+        <p>Dax Systems &mdash; Udhibiti wa Mfumo Mzima</p>
+      </div>
+      <button class="dp-logout" onclick="developerLogout()"><i class="fas fa-sign-out-alt"></i> Toka</button>
+    </div>
+    <div class="dp-tabs">
+      <button class="dp-tab active" id="devTabAccounts" onclick="switchDevTab('accounts')"><i class="fas fa-users-cog"></i> Accounts</button>
+      <button class="dp-tab" id="devTabActivities" onclick="switchDevTab('activities')"><i class="fas fa-history"></i> Activities</button>
+      <button class="dp-tab" id="devTabRecyclebin" onclick="switchDevTab('recyclebin')"><i class="fas fa-trash-restore"></i> Recycle Bin</button>
+      <button class="dp-tab" id="devTabSettings" onclick="switchDevTab('settings')"><i class="fas fa-cog"></i> Settings</button>
+    </div>
+    <div class="dp-content" id="devContent">
+      <div class="dp-empty"><i class="fas fa-spinner fa-spin"></i> Inapakia...</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  switchDevTab('accounts');
+  
+  // Item 1: Pakia "Activities" pia kwa "background" (bila kuonesha "loading")
+  // ili tab hiyo ikiwa "clicked" baadaye, iwe tayari na data - hakuna kusubiri
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getDeveloperActivityFeed', devToken: sessionStorage.getItem('devToken') })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      devActivitiesCache = data.activities || [];
+      if (devCurrentTab === 'activities') renderDeveloperActivities();
+    }
+  })
+  .catch(() => {});
+  
+  // Item 1: Pakia "Recycle Bin" pia kwa "background"
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getDeveloperRecycleBin', devToken: sessionStorage.getItem('devToken') })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      devRecycleBinCache = data.accounts || [];
+      if (devCurrentTab === 'recyclebin') renderDeveloperRecycleBin();
+    }
+  })
+  .catch(() => {});
+}
+
+function switchDevTab(tab) {
+  devCurrentTab = tab;
+  document.querySelectorAll('#developerPortalOverlay .dp-tab').forEach(el => el.classList.remove('active'));
+  const btn = document.getElementById('devTab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+  if (btn) btn.classList.add('active');
+  
+  if (tab === 'accounts') {
+    if (devAccountsCache.length > 0) {
+      renderDeveloperAccounts(); // Item 1: onesha kutoka "cache" MARA MOJA
+      silentlyRefreshDevAccounts(); // kisha sasisha kimya kimya nyuma ya pazia
+    } else {
+      loadDeveloperAccounts(); // hakuna "cache" bado - pakia kwa "loading"
+    }
+  } else if (tab === 'activities') {
+    if (devActivitiesCache.length > 0) {
+      renderDeveloperActivities();
+      silentlyRefreshDevActivities();
+    } else {
+      loadDeveloperActivities();
+    }
+  } else if (tab === 'recyclebin') {
+    if (devRecycleBinCache.length > 0) {
+      renderDeveloperRecycleBin();
+      silentlyRefreshDevRecycleBin();
+    } else {
+      loadDeveloperRecycleBin();
+    }
+  } else if (tab === 'settings') renderDeveloperSettingsTab();
+}
+
+// Item 1: Sasisha data "kimya kimya" nyuma ya pazia (bila "loading" spinner) -
+// endapo kuna mabadiliko yoyote, yataonekana yakisasishwa bila mtumiaji kuhitaji
+// kusubiri au kuona chochote kikiwa "kinapakia"
+function silentlyRefreshDevAccounts() {
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getDeveloperAccountsList', devToken: sessionStorage.getItem('devToken') })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      devAccountsCache = data.accounts;
+      if (devCurrentTab === 'accounts') renderDeveloperAccounts();
+    }
+  })
+  .catch(() => {}); // kimya - usimsumbue mtumiaji kwa hitilafu za "background"
+}
+
+function silentlyRefreshDevActivities() {
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getDeveloperActivityFeed', devToken: sessionStorage.getItem('devToken') })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      devActivitiesCache = data.activities || [];
+      // MUHIMU: tumia "results list" PEKEE (siyo "controls" zote) ili
+      // kutosumbua "input" ya utafutaji endapo mtumiaji anaandika wakati huo
+      if (devCurrentTab === 'activities' && document.getElementById('devActivityResultsList')) {
+        renderDevActivityResultsList();
+      }
+    }
+  })
+  .catch(() => {});
+}
+
+function silentlyRefreshDevRecycleBin() {
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getDeveloperRecycleBin', devToken: sessionStorage.getItem('devToken') })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      devRecycleBinCache = data.accounts || [];
+      if (devCurrentTab === 'recyclebin') renderDeveloperRecycleBin();
+    }
+  })
+  .catch(() => {});
+}
+
+function devHandleAuthFailure(data) {
+  if (data.message && data.message.indexOf('Muda') !== -1) {
+    Notiflix.Notify.failure(data.message);
+    developerLogout();
+    return true;
+  }
+  return false;
+}
+
+function applyDevActivityFilters() {
+  devActivityFilterDbId = document.getElementById('devActivityAcctFilter').value;
+  devActivityFilterName = document.getElementById('devActivityNameFilter').value.trim();
+  loadDeveloperActivities();
+}
+
+function clearDevActivityFilters() {
+  devActivityFilterDbId = '';
+  devActivityFilterName = '';
+  loadDeveloperActivities();
+}
+
+// Kutoka kwenye kadi ya Akaunti (tab ya Accounts) - nenda moja kwa moja kwenye
+// Activities zilizochujwa kwa Akaunti hiyo
+function filterDevActivitiesByAccount(dbId, orgName) {
+  devActivityFilterDbId = dbId;
+  devActivityFilterName = '';
+  switchDevTab('activities');
+}
+
+function loadDeveloperAccounts() {
+  const content = document.getElementById('devContent');
+  content.innerHTML = '<div class="dp-empty"><i class="fas fa-spinner fa-spin"></i> Inapakia Accounts...</div>';
+  
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getDeveloperAccountsList', devToken: sessionStorage.getItem('devToken') })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status !== 'success') {
+      if (devHandleAuthFailure(data)) return;
+      content.innerHTML = `<div class="dp-empty">${data.message || 'Imeshindwa kupakia'}</div>`;
+      return;
+    }
+    devAccountsCache = data.accounts;
+    if (devCurrentTab === 'accounts') renderDeveloperAccounts();
+  })
+  .catch((error) => {
+    console.error('Developer Panel error:', error);
+    content.innerHTML = '<div class="dp-empty">Hitilafu ya mtandao - jaribu tena</div>';
+  });
+}
+
+// Item 1: Chora "Accounts" moja kwa moja kutoka "cache" iliyokwisha kupakiwa
+// (bila "loading" tena) - hii inafanya "tab" ionekane MARA MOJA mtumiaji
+// anapoibofya, kwa kuwa data tayari zilishapakiwa wakati wa "kuingia"
+function renderDeveloperAccounts() {
+  const content = document.getElementById('devContent');
+  const accounts = devAccountsCache;
+  
+  const orgCount = accounts.filter(a => a.accountType !== 'personal').length;
+  const personalCount = accounts.filter(a => a.accountType === 'personal').length;
+  
+  let html = `
+    <div class="dp-stat-grid">
+      <div class="dp-stat-card"><div class="num">${accounts.length}</div><div class="label">Jumla ya Accounts</div></div>
+      <div class="dp-stat-card"><div class="num">${orgCount}</div><div class="label">Vikundi/Mashirika</div></div>
+      <div class="dp-stat-card"><div class="num">${personalCount}</div><div class="label">Akaunti Binafsi</div></div>
+    </div>
+  `;
+  
+  if (accounts.length === 0) {
+    html += '<div class="dp-empty">Hakuna akaunti bado</div>';
+  } else {
+    html += accounts.map((acc, idx) => {
+      const safeOrgName = (acc.organizationName || 'Bila Jina').replace(/'/g, "\\'");
+      const planColor = acc.planActive ? '#86efac' : '#fca5a5';
+      const planBg = acc.planActive ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+      let planLabel;
+      if (acc.planType === 'Unlimited') {
+        planLabel = 'Unlimited (Bila Kikomo)';
+      } else if (acc.planExpiry) {
+        const expiryStr = new Date(acc.planExpiry).toLocaleDateString('sw-TZ');
+        const msRemaining = acc.planExpiry - new Date().getTime();
+        planLabel = acc.planActive
+          ? 'Hai mpaka ' + expiryStr + ' (' + formatTimeRemaining(msRemaining) + ')'
+          : 'Imeisha - ' + expiryStr;
+      } else {
+        planLabel = 'Haijulikani';
+      }
+      return `
+      <div class="dp-account-card">
+        <h4>${acc.organizationName || 'Bila Jina'} <span class="dp-badge">${acc.accountType}</span></h4>
+        <div class="meta">
+          <div><i class="fas fa-envelope"></i> ${acc.email}</div>
+          <div id="devAcctStats${idx}"><i class="fas fa-users"></i> <span style="opacity:0.6;">Bofya "Ona Takwimu" kuona Wanachama/Fedha</span></div>
+          <div><i class="fas fa-calendar"></i> ${acc.createdDate ? new Date(acc.createdDate).toLocaleDateString('sw-TZ') : '-'}</div>
+          <div style="font-size:10px; opacity:0.55;"><i class="fas fa-database"></i> ${acc.dbId}</div>
+        </div>
+        <div style="margin-top:8px; padding:8px 10px; border-radius:8px; background:${planBg}; color:${planColor}; font-size:12px; font-weight:700; display:inline-block;">
+          <i class="fas fa-${acc.planType === 'Unlimited' ? 'infinity' : 'clock'}"></i> Plan: ${acc.planType || 'Trial'} &mdash; ${planLabel}
+        </div>
+        <div>
+        <button class="dp-btn" style="background:rgba(99,102,241,0.15); color:#a5b4fc;" onclick="loadDevAccountStats('${acc.dbId}', ${idx})"><i class="fas fa-chart-bar"></i> Ona Takwimu</button>
+        <button class="dp-btn" style="background:rgba(99,102,241,0.15); color:#a5b4fc;" onclick="filterDevActivitiesByAccount('${acc.dbId}', '${safeOrgName}')"><i class="fas fa-history"></i> Ona Activities</button>
+        <button class="dp-btn" style="background:rgba(34,197,94,0.15); color:#86efac;" onclick="developerGrantPlanTimeUI('${acc.dbId}', '${safeOrgName}')"><i class="fas fa-hourglass-half"></i> Toa Muda</button>
+        <button class="dp-btn dp-btn-warning" onclick="developerResetPasswordUI('${acc.dbId}', '${safeOrgName}')"><i class="fas fa-key"></i> Weka Upya Nenosiri</button>
+        <button class="dp-btn dp-btn-danger" onclick="developerDeleteAccountUI('${acc.dbId}', '${safeOrgName}')"><i class="fas fa-trash"></i> Futa Akaunti</button>
+        </div>
+      </div>
+    `;
+    }).join('');
+  }
+  
+  content.innerHTML = html;
+}
+
+// Item 1: Pakia takwimu za Akaunti MOJA maalum (Wanachama/Fedha) kwa "hiyari" -
+// hii ndiyo inayofanya "Accounts" tab kupakia HARAKA sana (badala ya kufungua
+// kila Spreadsheet ya kila akaunti mara moja)
+function loadDevAccountStats(dbId, idx) {
+  const statsEl = document.getElementById('devAcctStats' + idx);
+  if (!statsEl) return;
+  statsEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Inapakia...';
+  
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getDeveloperAccountDetails', devToken: sessionStorage.getItem('devToken'), dbId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status !== 'success') {
+      if (devHandleAuthFailure(data)) return;
+      statsEl.innerHTML = `<span style="color:#fca5a5;">${data.message || 'Imeshindwa'}</span>`;
+      return;
+    }
+    statsEl.innerHTML = `<i class="fas fa-users"></i> ${data.memberCount} Wanachama &nbsp;|&nbsp; <i class="fas fa-coins"></i> ${formatCurrency(data.totalFunds)}`;
+  })
+  .catch((error) => {
+    console.error('Developer Panel error:', error);
+    statsEl.innerHTML = '<span style="color:#fca5a5;">Hitilafu ya mtandao</span>';
+  });
+}
+
+let devActivityFilterDbId = '';
+let devActivityFilterName = '';
+
+function loadDeveloperActivities() {
+  const content = document.getElementById('devContent');
+  content.innerHTML = '<div class="dp-empty"><i class="fas fa-spinner fa-spin"></i> Inapakia Activities...</div>';
+  
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getDeveloperActivityFeed', devToken: sessionStorage.getItem('devToken') })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status !== 'success') {
+      if (devHandleAuthFailure(data)) return;
+      content.innerHTML = `<div class="dp-empty">${data.message || 'Imeshindwa kupakia'}</div>`;
+      return;
+    }
+    devActivitiesCache = data.activities || [];
+    if (devCurrentTab === 'activities') renderDeveloperActivities();
+  })
+  .catch((error) => {
+    console.error('Developer Panel error:', error);
+    content.innerHTML = '<div class="dp-empty">Hitilafu ya mtandao - jaribu tena</div>';
+  });
+}
+
+// Item 2/3/4: Chuja "Activities" MOJA KWA MOJA kwenye kifaa (client-side) kutoka
+// "cache" iliyokwisha kupakiwa - HAKUNA ombi jipya kwenda "server" kila herufi
+// inapoandikwa au Akaunti inapochaguliwa. Hii inafanya uchujaji uwe wa HARAKA
+// (bila kusubiri mtandao) - endapo hakuna kilichochaguliwa/kuandikwa, ONESHA
+// ZOTE (Item 2)
+function getFilteredDevActivities() {
+  let filtered = devActivitiesCache;
+  if (devActivityFilterDbId) {
+    filtered = filtered.filter(a => a.dbId === devActivityFilterDbId);
+  }
+  if (devActivityFilterName) {
+    const needle = devActivityFilterName.toLowerCase();
+    filtered = filtered.filter(a => (a.actorName || '').toLowerCase().indexOf(needle) !== -1);
+  }
+  return filtered;
+}
+
+// Chora "controls" za uchujaji MARA MOJA TU (siyo kila herufi) - ili kuepuka
+// "input" kupoteza "focus" ya kuandika wakati wa "auto search"
+function renderDeveloperActivities() {
+  const content = document.getElementById('devContent');
+  
+  const accountOptions = devAccountsCache.map(acc =>
+    `<option value="${acc.dbId}" ${devActivityFilterDbId === acc.dbId ? 'selected' : ''}>${acc.organizationName || 'Bila Jina'}</option>`
+  ).join('');
+  
+  content.innerHTML = `
+    <div class="dp-account-card" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+      <div style="flex:1; min-width:160px;">
+        <label style="font-size:11px; color:#94a3b8; display:block; margin-bottom:4px;">Chuja kwa Akaunti</label>
+        <select id="devActivityAcctFilter" onchange="onDevActivityAcctFilterChange()" style="width:100%; padding:9px; border-radius:8px; border:1px solid rgba(148,163,184,0.25); background:rgba(11,15,30,0.6); color:#fff; font-size:12.5px;">
+          <option value="">-- Akaunti Zote --</option>
+          ${accountOptions}
+        </select>
+      </div>
+      <div style="flex:1; min-width:160px;">
+        <label style="font-size:11px; color:#94a3b8; display:block; margin-bottom:4px;">Tafuta kwa Jina (Mtu)</label>
+        <input type="text" id="devActivityNameFilter" placeholder="Jina la Mwanachama au Msimamizi (auto search)" value="${devActivityFilterName}" oninput="onDevActivityNameFilterInput()" style="margin:0;">
+      </div>
+      <button class="dp-btn" id="devActivityClearBtn" style="background:rgba(148,163,184,0.15); color:#cbd5e1; margin:0; ${(devActivityFilterDbId || devActivityFilterName) ? '' : 'display:none;'}" onclick="clearDevActivityFilters()"><i class="fas fa-times"></i> Futa Uchujaji</button>
+    </div>
+    <div id="devActivityResultsList"></div>
+  `;
+  
+  renderDevActivityResultsList();
+}
+
+// Item 3/4: Sasisha ORODHA PEKEE (siyo "controls" za uchujaji) - hii ndiyo
+// inayoitwa kila herufi inapoandikwa (auto search) au Akaunti inapobadilishwa,
+// ikitunza "focus" ya "input" bila kuivuruga
+function renderDevActivityResultsList() {
+  const resultsEl = document.getElementById('devActivityResultsList');
+  if (!resultsEl) return;
+  
+  const filtered = getFilteredDevActivities();
+  
+  const clearBtn = document.getElementById('devActivityClearBtn');
+  if (clearBtn) clearBtn.style.display = (devActivityFilterDbId || devActivityFilterName) ? '' : 'none';
+  
+  if (filtered.length === 0) {
+    resultsEl.innerHTML = '<div class="dp-empty">Hakuna matukio yanayolingana</div>';
+    return;
+  }
+  
+  resultsEl.innerHTML = filtered.map(a => `
+    <div class="dp-activity-row">
+      <div class="dp-activity-dot"></div>
+      <div style="flex:1;">
+        <div style="color:#fff; font-size:13px; font-weight:700;">${a.event} ${a.actorType ? `<span class="dp-badge">${a.actorType}</span>` : ''}</div>
+        <div style="font-size:11.5px; color:#94a3b8;">${a.actorName ? a.actorName + ' &mdash; ' : ''}${a.details || ''}</div>
+        <div style="font-size:10.5px; color:#64748b; margin-top:2px;">${a.timestamp ? new Date(a.timestamp).toLocaleString('sw-TZ') : ''}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Item 3: Akaunti ikichaguliwa, chuja MARA MOJA (bila kusubiri kitufe)
+function onDevActivityAcctFilterChange() {
+  devActivityFilterDbId = document.getElementById('devActivityAcctFilter').value;
+  renderDevActivityResultsList();
+}
+
+// Item 4: "Auto search" - kila herufi inapoandikwa, chuja MARA MOJA
+function onDevActivityNameFilterInput() {
+  devActivityFilterName = document.getElementById('devActivityNameFilter').value.trim();
+  renderDevActivityResultsList();
+}
+
+function clearDevActivityFilters() {
+  devActivityFilterDbId = '';
+  devActivityFilterName = '';
+  renderDeveloperActivities();
+}
+
+function loadDeveloperRecycleBin() {
+  const content = document.getElementById('devContent');
+  content.innerHTML = '<div class="dp-empty"><i class="fas fa-spinner fa-spin"></i> Inapakia Recycle Bin...</div>';
+  
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getDeveloperRecycleBin', devToken: sessionStorage.getItem('devToken') })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status !== 'success') {
+      if (devHandleAuthFailure(data)) return;
+      content.innerHTML = `<div class="dp-empty">${data.message || 'Imeshindwa kupakia'}</div>`;
+      return;
+    }
+    devRecycleBinCache = data.accounts || [];
+    if (devCurrentTab === 'recyclebin') renderDeveloperRecycleBin();
+  })
+  .catch((error) => {
+    console.error('Developer Panel error:', error);
+    content.innerHTML = '<div class="dp-empty">Hitilafu ya mtandao - jaribu tena</div>';
+  });
+}
+
+// Item 5/6: Onesha Akaunti zilizofutwa (soft-delete) - zinaweza kurejeshwa
+// wakati wowote. Hii ni "Recycle Bin" ya SIRI - haionekani mahali pengine
+// popote nje ya Developer Panel
+function renderDeveloperRecycleBin() {
+  const content = document.getElementById('devContent');
+  const accounts = devRecycleBinCache;
+  
+  let html = `
+    <div class="dp-stat-grid">
+      <div class="dp-stat-card"><div class="num">${accounts.length}</div><div class="label">Accounts kwenye Recycle Bin</div></div>
+    </div>
+  `;
+  
+  if (accounts.length === 0) {
+    html += '<div class="dp-empty">Recycle Bin ni tupu</div>';
+  } else {
+    html += accounts.map(acc => {
+      const safeOrgName = (acc.organizationName || 'Bila Jina').replace(/'/g, "\\'");
+      return `
+      <div class="dp-account-card">
+        <h4>${acc.organizationName || 'Bila Jina'} <span class="dp-badge">${acc.accountType}</span></h4>
+        <div class="meta">
+          <div><i class="fas fa-envelope"></i> ${acc.email}</div>
+          <div><i class="fas fa-calendar-plus"></i> Iliundwa: ${acc.createdDate ? new Date(acc.createdDate).toLocaleDateString('sw-TZ') : '-'}</div>
+          <div><i class="fas fa-calendar-times"></i> Ilifutwa: ${acc.deletedDate ? new Date(acc.deletedDate).toLocaleString('sw-TZ') : '-'}</div>
+          <div style="font-size:10px; opacity:0.55;"><i class="fas fa-database"></i> ${acc.dbId}</div>
+        </div>
+        <button class="dp-btn" style="background:rgba(34,197,94,0.15); color:#86efac;" onclick="developerRestoreAccountUI('${acc.dbId}', '${safeOrgName}')"><i class="fas fa-trash-restore"></i> Rejesha Akaunti</button>
+      </div>
+    `;
+    }).join('');
+  }
+  
+  content.innerHTML = html;
+}
+
+function developerRestoreAccountUI(dbId, orgName) {
+  Swal.fire({
+    title: 'Rejesha Akaunti?',
+    html: `<p>Una uhakika unataka kurejesha akaunti ya <strong>${orgName}</strong>? Itaweza kuingia tena kama kawaida (nenosiri lake la awali litabaki lilelile). Akaunti za Wanachama wa Kikundi hiki pia zitarejeshwa pamoja nayo.</p>`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ndio, Rejesha',
+    confirmButtonColor: '#22c55e',
+    cancelButtonText: 'Ghairi'
+  }).then(result => {
+    if (!result.isConfirmed) return;
+    Notiflix.Loading.standard('Inarejesha...');
+    fetchWithTimeout(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'developerRestoreAccount', devToken: sessionStorage.getItem('devToken'), dbId })
+    })
+    .then(res => res.json())
+    .then(data => {
+      Notiflix.Loading.remove();
+      if (data.status === 'success') {
+        Notiflix.Notify.success(data.message);
+        loadDeveloperRecycleBin();
+        loadDeveloperAccounts(); // sasisha "Accounts" pia (imeongezwa upya humo)
+      } else {
+        if (devHandleAuthFailure(data)) return;
+        Notiflix.Notify.failure(data.message);
+      }
+    })
+    .catch((error) => {
+      Notiflix.Loading.remove();
+      console.error('Developer Panel error:', error);
+      Notiflix.Notify.failure('Hitilafu ya mtandao');
+    });
+  });
+}
+
+function renderDeveloperSettingsTab() {
+  const content = document.getElementById('devContent');
+  content.innerHTML = `
+    <div class="dp-account-card" style="max-width:400px;">
+      <h4><i class="fas fa-key"></i> Badilisha Nenosiri la Developer</h4>
+      <div style="margin-top:12px;">
+        <input type="password" id="devCurrentPwd" placeholder="Nenosiri la sasa">
+        <input type="password" id="devNewPwd" placeholder="Nenosiri jipya (herufi 8+, mchanganyiko)" oninput="checkPasswordStrength(this.value, 'devPwdStrengthFill', 'devPwdStrengthText')">
+        <div class="password-strength-wrapper">
+          <div class="password-strength-bar"><div class="password-strength-bar-fill" id="devPwdStrengthFill"></div></div>
+          <small class="password-strength-text" id="devPwdStrengthText" style="color:#94a3b8;">Weka nenosiri kuona hali yake</small>
+        </div>
+        <button class="dp-btn dp-btn-warning" style="margin-top:14px;" onclick="submitDevPasswordChange()"><i class="fas fa-save"></i> Hifadhi Nenosiri Jipya</button>
+      </div>
+    </div>
+  `;
+}
+
+function submitDevPasswordChange() {
+  const currentPassword = document.getElementById('devCurrentPwd').value;
+  const newPassword = document.getElementById('devNewPwd').value;
+  
+  if (!isPasswordValid(newPassword)) {
+    Notiflix.Notify.failure('Nenosiri jipya liwe angalau herufi 8 likiwa na mchanganyiko wa herufi kubwa, ndogo na namba');
+    return;
+  }
+  
+  Notiflix.Loading.standard('Inabadilisha...');
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'changeDeveloperPassword', devToken: sessionStorage.getItem('devToken'), currentPassword, newPassword })
+  })
+  .then(res => res.json())
+  .then(data => {
+    Notiflix.Loading.remove();
+    if (data.status === 'success') {
+      Notiflix.Notify.success(data.message);
+      document.getElementById('devCurrentPwd').value = '';
+      document.getElementById('devNewPwd').value = '';
+    } else {
+      if (devHandleAuthFailure(data)) return;
+      Notiflix.Notify.failure(data.message);
+    }
+  })
+  .catch((error) => {
+    console.error('Developer Panel error:', error);
+    Notiflix.Loading.remove();
+    Notiflix.Notify.failure('Hitilafu ya mtandao');
+  });
+}
+
+// Item 3/4: Developer anatoa muda wa matumizi kwenye Akaunti - fomu moja
+// inayosaidia "units" zote (dakika, saa, siku, wiki, mwezi, mwaka, Unlimited,
+// Custom, na Ofa) - sehemu husika zinaonekana/kufichwa kutegemea uchaguzi
+function developerGrantPlanTimeUI(dbId, orgName) {
+  Swal.fire({
+    title: 'Toa Muda - ' + orgName,
+    html: `
+      <div style="text-align:left; font-size:13px;">
+        <label style="font-weight:600; display:block; margin-bottom:6px;">Aina ya Muda</label>
+        <select id="devPlanUnit" class="swal2-select" style="width:100%; margin:0 0 12px;" onchange="devUpdatePlanTimeFormVisibility()">
+          <option value="minutes">Dakika</option>
+          <option value="hours">Saa</option>
+          <option value="days" selected>Siku</option>
+          <option value="weeks">Wiki</option>
+          <option value="months">Mwezi</option>
+          <option value="years">Mwaka</option>
+          <option value="unlimited">Unlimited (Bila Kikomo)</option>
+          <option value="custom">Custom (Chagua Tarehe)</option>
+          <option value="offer">Ofa (Muda wa Kipekee)</option>
+        </select>
+        
+        <div id="devPlanAmountWrap">
+          <label style="font-weight:600; display:block; margin-bottom:6px;">Kiasi</label>
+          <input type="number" id="devPlanAmount" class="swal2-input" style="width:100%; margin:0 0 12px;" placeholder="Mfano: 30" min="1">
+        </div>
+        
+        <div id="devPlanCustomWrap" class="hidden">
+          <label style="font-weight:600; display:block; margin-bottom:6px;">Chagua Tarehe ya Mwisho</label>
+          <input type="date" id="devPlanCustomDate" class="swal2-input" style="width:100%; margin:0 0 12px;">
+        </div>
+        
+        <div id="devPlanOfferWrap" class="hidden">
+          <label style="font-weight:600; display:block; margin-bottom:6px;">Muda wa Ofa</label>
+          <div style="display:flex; gap:8px;">
+            <input type="number" id="devPlanOfferAmount" class="swal2-input" style="flex:1; margin:0;" placeholder="Kiasi" min="1">
+            <select id="devPlanOfferUnit" class="swal2-select" style="flex:1; margin:0;">
+              <option value="minutes">Dakika</option>
+              <option value="hours">Saa</option>
+              <option value="days" selected>Siku</option>
+              <option value="weeks">Wiki</option>
+              <option value="months">Mwezi</option>
+              <option value="years">Mwaka</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Toa Muda',
+    confirmButtonColor: '#22c55e',
+    cancelButtonText: 'Ghairi',
+    didOpen: () => { devUpdatePlanTimeFormVisibility(); },
+    preConfirm: () => {
+      const unit = document.getElementById('devPlanUnit').value;
+      const payload = { unit };
+      
+      if (unit === 'custom') {
+        const customDate = document.getElementById('devPlanCustomDate').value;
+        if (!customDate) {
+          Swal.showValidationMessage('Tafadhali chagua tarehe');
+          return false;
+        }
+        payload.customDate = customDate;
+      } else if (unit === 'offer') {
+        const offerAmount = document.getElementById('devPlanOfferAmount').value;
+        const offerUnit = document.getElementById('devPlanOfferUnit').value;
+        if (!offerAmount || offerAmount <= 0) {
+          Swal.showValidationMessage('Tafadhali weka kiasi cha muda wa Ofa');
+          return false;
+        }
+        payload.offerAmount = offerAmount;
+        payload.offerUnit = offerUnit;
+      } else if (unit !== 'unlimited') {
+        const amount = document.getElementById('devPlanAmount').value;
+        if (!amount || amount <= 0) {
+          Swal.showValidationMessage('Tafadhali weka kiasi');
+          return false;
+        }
+        payload.amount = amount;
+      }
+      
+      return payload;
+    }
+  }).then(result => {
+    if (!result.isConfirmed) return;
+    Notiflix.Loading.standard('Inatoa muda...');
+    fetchWithTimeout(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(Object.assign({
+        action: 'developerGrantPlanTime',
+        devToken: sessionStorage.getItem('devToken'),
+        dbId: dbId
+      }, result.value))
+    })
+    .then(res => res.json())
+    .then(data => {
+      Notiflix.Loading.remove();
+      if (data.status === 'success') {
+        Notiflix.Notify.success(data.message);
+        loadDeveloperAccounts();
+      } else {
+        if (devHandleAuthFailure(data)) return;
+        Notiflix.Notify.failure(data.message);
+      }
+    })
+    .catch((error) => {
+      Notiflix.Loading.remove();
+      console.error('Developer Panel error:', error);
+      Notiflix.Notify.failure('Hitilafu ya mtandao');
+    });
+  });
+}
+
+// Onesha/ficha sehemu husika kutegemea "unit" iliyochaguliwa
+function devUpdatePlanTimeFormVisibility() {
+  const unit = document.getElementById('devPlanUnit').value;
+  const amountWrap = document.getElementById('devPlanAmountWrap');
+  const customWrap = document.getElementById('devPlanCustomWrap');
+  const offerWrap = document.getElementById('devPlanOfferWrap');
+  
+  amountWrap.classList.add('hidden');
+  customWrap.classList.add('hidden');
+  offerWrap.classList.add('hidden');
+  
+  if (unit === 'custom') {
+    customWrap.classList.remove('hidden');
+  } else if (unit === 'offer') {
+    offerWrap.classList.remove('hidden');
+  } else if (unit !== 'unlimited') {
+    amountWrap.classList.remove('hidden');
+  }
+}
+
+function developerResetPasswordUI(dbId, orgName) {
+  Swal.fire({
+    title: 'Weka Upya Nenosiri - ' + orgName,
+    html: `<input type="password" id="devResetNewPwd" class="swal2-input" placeholder="Nenosiri jipya (herufi 8+, mchanganyiko)">`,
+    showCancelButton: true,
+    confirmButtonText: 'Weka Upya',
+    cancelButtonText: 'Ghairi',
+    preConfirm: () => {
+      const pwd = document.getElementById('devResetNewPwd').value;
+      if (!isPasswordValid(pwd)) {
+        Swal.showValidationMessage('Nenosiri liwe angalau herufi 8 likiwa na mchanganyiko wa herufi kubwa, ndogo na namba');
+        return false;
+      }
+      return pwd;
+    }
+  }).then(result => {
+    if (!result.isConfirmed) return;
+    Notiflix.Loading.standard('Inaweka upya...');
+    fetchWithTimeout(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'developerResetAccountPassword', devToken: sessionStorage.getItem('devToken'), dbId, newPassword: result.value })
+    })
+    .then(res => res.json())
+    .then(data => {
+      Notiflix.Loading.remove();
+      if (data.status === 'success') {
+        Notiflix.Notify.success(data.message);
+      } else {
+        if (devHandleAuthFailure(data)) return;
+        Notiflix.Notify.failure(data.message);
+      }
+    })
+    .catch((error) => {
+      console.error('Developer Panel error:', error);
+      Notiflix.Loading.remove();
+      Notiflix.Notify.failure('Hitilafu ya mtandao');
+    });
+  });
+}
+
+function developerDeleteAccountUI(dbId, orgName) {
+  Swal.fire({
+    title: 'Futa Akaunti?',
+    html: `<p>Una uhakika unataka kufuta akaunti ya <strong>${orgName}</strong>? Itahamishwa kwenye Recycle Bin (haitafutwa kabisa - inaweza kurejeshwa wakati wowote). Akaunti za Wanachama wa Kikundi hiki (multi-org login) pia zitafutwa pamoja nayo.</p>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ndio, Futa',
+    confirmButtonColor: '#ef4444',
+    cancelButtonText: 'Ghairi'
+  }).then(result => {
+    if (!result.isConfirmed) return;
+    Notiflix.Loading.standard('Inafuta...');
+    fetchWithTimeout(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'developerDeleteAccount', devToken: sessionStorage.getItem('devToken'), dbId })
+    })
+    .then(res => res.json())
+    .then(data => {
+      Notiflix.Loading.remove();
+      if (data.status === 'success') {
+        Notiflix.Notify.success(data.message);
+        loadDeveloperAccounts();
+        loadDeveloperRecycleBin(); // sasisha "cache" ya Recycle Bin pia
+      } else {
+        if (devHandleAuthFailure(data)) return;
+        Notiflix.Notify.failure(data.message);
+      }
+    })
+    .catch((error) => {
+      console.error('Developer Panel error:', error);
+      Notiflix.Loading.remove();
+      Notiflix.Notify.failure('Hitilafu ya mtandao');
+    });
+  });
+}
+
+function developerLogout() {
+  sessionStorage.removeItem('devToken');
+  const overlay = document.getElementById('developerPortalOverlay');
+  if (overlay) overlay.remove();
+  showLogin();
+}
 
 function showMemberPortal() {
   mpDbId = localStorage.getItem('memberDbId');
@@ -5018,6 +5914,19 @@ function mpLoginToKnownOrgUI(dbId, orgName) {
 }
 
 function memberPortalLogout() {
+  // Item 2: Rekodi "Ametoka" (Logout) KABLA ya kufuta "localStorage"
+  if (mpDbId && mpMemberId) {
+    fetchWithTimeout(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'logMemberLogoutActivity',
+        dbId: mpDbId,
+        memberId: mpMemberId,
+        memberName: localStorage.getItem('memberName') || ''
+      })
+    }).catch(() => {});
+  }
+  
   localStorage.removeItem('memberDbId');
   localStorage.removeItem('memberId');
   localStorage.removeItem('memberName');
@@ -6385,16 +7294,29 @@ function showMainDashboard() {
 // Item 4: Pakia "tabs" zote za Dashibodi (isipokuwa ile iliyokwisha kupakiwa) - hii
 // inatumika mara MOJA tu baada ya mfumo kufunguka, kwa "background", ili
 // zisisubiriwe tena baadaye
+// Item (fix wa kasi - MUHIMU): Badala ya kupakia "tabs" ZOTE kwa WAKATI MMOJA
+// (jambo lililokuwa likisababisha maombi yote kugongana na kupunguza kasi ya
+// kila kimoja - Google Apps Script ina kikomo cha maombi yanayofanya kazi kwa
+// wakati mmoja), sasa tunapakia MOJA BAADA YA NYINGINE, kila moja ikisubiri
+// iliyotangulia kumaliza kabla ya kuanza - hii inahakikisha "tab" inayotazamwa
+// na mtumiaji (Overview) inapata rasilimali zote za "server" bila kushindana
 function preloadAllDashboardTabs() {
-  if (shouldReloadDashboardTab('overview')) loadOverview();
+  var tasks = [];
+  
+  if (shouldReloadDashboardTab('overview')) tasks.push(loadOverview);
   if ((currentAccountType === 'organization' || currentAccountType === 'savings_group') && shouldReloadDashboardTab('members')) {
-    loadMembers();
-    loadMembersForTransaction();
+    tasks.push(loadMembers);
+    tasks.push(loadMembersForTransaction);
   }
-  if (shouldReloadDashboardTab('transactions')) loadTransactions();
-  if (currentAccountType === 'savings_group' && shouldReloadDashboardTab('loans')) loadLoansDashboard();
-  if (shouldReloadDashboardTab('reports')) loadReports();
-  if (shouldReloadDashboardTab('settings')) loadSettings();
+  if (shouldReloadDashboardTab('transactions')) tasks.push(loadTransactions);
+  if (currentAccountType === 'savings_group' && shouldReloadDashboardTab('loans')) tasks.push(loadLoansDashboard);
+  if (shouldReloadDashboardTab('reports')) tasks.push(loadReports);
+  if (shouldReloadDashboardTab('settings')) tasks.push(loadSettings);
+  
+  // Pakia kila "task" kwa "gap" ndogo (sekunde 0.6) - siyo zote mara moja
+  tasks.forEach(function(task, idx) {
+    setTimeout(task, idx * 600);
+  });
 }
 
 // Add this with other global variables at the top
@@ -6501,6 +7423,16 @@ function login() {
     Notiflix.Loading.remove();
     
     if (data.status === 'success') {
+      // Item: Developer Panel - "userType" pekee ndiyo inayotambulika hapa
+      // (SIYO barua pepe yoyote maalum iliyoandikwa kwenye "frontend") - Backend
+      // ndiyo pekee inayojua ni akaunti gani ya Developer
+      if (data.userType === 'developer') {
+        sessionStorage.setItem('devToken', data.devToken);
+        Notiflix.Notify.success(data.message);
+        showDeveloperPortal();
+        return;
+      }
+      
       currentDbId = data.dbId;
       currentOrganization = data.organizationName;
       currentUserEmail = email;
@@ -6533,6 +7465,15 @@ function login() {
 
 // Check if user is logged in
 document.addEventListener('DOMContentLoaded', function() {
+  // Item: Developer Panel - endelea moja kwa moja endapo "session" bado ipo
+  // (haihitaji "backend" kuthibitisha hapa - "token" yenyewe itathibitishwa na
+  // "backend" kila ombi linalofuata; endapo imekwisha muda, ombi la kwanza
+  // litakataliwa na mtumiaji atarudishwa kwenye "Ingia" kiotomatiki)
+  if (sessionStorage.getItem('devToken')) {
+    showDeveloperPortal();
+    return;
+  }
+  
   // Item 4/5: Ikiwa Mwanachama tayari ameingia, fungua "portal" yake moja kwa moja
   if (localStorage.getItem('memberLoggedIn') === 'true' && localStorage.getItem('memberDbId')) {
     showMemberPortal();
@@ -6868,20 +7809,14 @@ function updateMemberAccountsDisplay(accounts) {
 
 function loadOverview() {
   markDashboardTabLoaded('overview');
-  // Get account type
-  fetchWithTimeout(SCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify({
-      action: 'getAccountType',
-      dbId: currentDbId
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.status === 'success') {
-      currentAccountType = data.accountType;
-      localStorage.setItem('accountType', currentAccountType);
-      
+  
+  // Item (fix wa kasi - MUHIMU): "currentAccountType" TAYARI inajulikana kutoka
+  // jibu la "login" (imehifadhiwa kwenye localStorage) - kuomba tena
+  // "getAccountType" hapa kila mara ilikuwa ni ombi zima lisilo la lazima
+  // kwenye njia MUHIMU zaidi (jambo la kwanza baada ya kuingia), likiongeza
+  // "round-trip" isiyohitajika kila wakati.
+  (function() {
+    {
       // Hakikisha menyu (Mikopo, Wanachama, n.k.) haziwahi kupotea baada ya refresh
       adjustStatsGridForAccountType();
       
@@ -6983,7 +7918,7 @@ function loadOverview() {
         loadMembersCountSilently();
       }
     }
-  });
+  })();
   
   // Load main account stats (siyo kwa akaunti za Akiba, Hisa na Mikopo - zina takwimu zake
   // zenyewe kupitia loadSavingsOverview() badala yake)
@@ -7180,6 +8115,19 @@ function logout() {
     'Ndio',
     'Hapana',
     function() {
+      // Item 2: Rekodi "Ametoka" (Logout) KABLA ya kufuta "localStorage"
+      if (currentDbId) {
+        fetchWithTimeout(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'logOwnerLogoutActivity',
+            dbId: currentDbId,
+            email: currentUserEmail,
+            organizationName: currentOrganization
+          })
+        }).catch(() => {});
+      }
+      
       localStorage.clear();
       currentDbId = null;
       currentOrganization = '';
@@ -12923,8 +13871,118 @@ function toggleMonthSelection() {
   }
 }
 
+// Item: Onesha hali ya "Plan" (Muda wa Matumizi) kwa Msimamizi
+// Item 2: Onesha muda uliosalia kwa "unit" inayofaa zaidi (dakika, saa, siku,
+// wiki, au mwezi) - siyo "siku" pekee kila wakati
+function formatTimeRemaining(msRemaining) {
+  if (msRemaining <= 0) return 'Imeisha';
+  
+  const minutes = Math.floor(msRemaining / (1000 * 60));
+  const hours = Math.floor(msRemaining / (1000 * 60 * 60));
+  const days = Math.floor(msRemaining / (1000 * 60 * 60 * 24));
+  const weeks = Math.floor(days / 7);
+  const months = Math.floor(days / 30);
+  
+  if (minutes < 60) {
+    return minutes + (minutes === 1 ? ' dakika' : ' dakika');
+  } else if (hours < 24) {
+    const remMinutes = minutes % 60;
+    return hours + ' saa' + (remMinutes > 0 ? ', ' + remMinutes + ' dakika' : '') + ' zilizobaki';
+  } else if (days < 7) {
+    const remHours = hours % 24;
+    return days + (days === 1 ? ' siku' : ' siku') + (remHours > 0 ? ', ' + remHours + ' saa' : '') + ' zilizobaki';
+  } else if (days < 30) {
+    const remDays = days % 7;
+    return weeks + (weeks === 1 ? ' wiki' : ' wiki') + (remDays > 0 ? ', ' + remDays + ' siku' : '') + ' zilizobaki';
+  } else {
+    const remDays = days % 30;
+    return months + (months === 1 ? ' mwezi' : ' miezi') + (remDays > 0 ? ', ' + remDays + ' siku' : '') + ' zilizobaki';
+  }
+}
+
+function loadPlanStatus() {
+  const contentEl = document.getElementById('planStatusContent');
+  const cardEl = document.getElementById('planStatusCard');
+  if (!contentEl) return;
+  
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'getAccountPlanStatus', dbId: currentDbId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status !== 'success') {
+      contentEl.innerHTML = '<span style="color:#94a3b8;">Imeshindwa kupakia hali ya Plan</span>';
+      return;
+    }
+    
+    if (data.planType === 'Unlimited') {
+      cardEl.style.borderLeftColor = '#22c55e';
+      contentEl.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <i class="fas fa-infinity" style="font-size:20px; color:#22c55e;"></i>
+          <div>
+            <strong style="color:#22c55e;">Bila Kikomo (Unlimited)</strong><br>
+            <small style="color:#888;">Akaunti yako haina ukomo wa muda</small>
+          </div>
+        </div>
+      `;
+      return;
+    }
+    
+    // Item (fix): Endapo tarehe haisomeki vizuri (isiyotarajiwa), usimwambie
+    // mtumiaji "imeisha" kimakosa - onesha "haijulikani" badala yake, ili
+    // asishtuke bure endapo Plan yake bado ni hai kihalisia
+    const parsedExpiry = data.expiryDate ? new Date(data.expiryDate) : null;
+    const hasValidExpiry = parsedExpiry && !isNaN(parsedExpiry.getTime());
+    
+    if (data.active) {
+      const msRemaining = hasValidExpiry ? (parsedExpiry.getTime() - new Date().getTime()) : null;
+      const timeRemainingText = msRemaining !== null ? formatTimeRemaining(msRemaining) : null;
+      const daysLeft = msRemaining !== null ? Math.floor(msRemaining / (1000 * 60 * 60 * 24)) : null;
+      const isTrial = data.planType === 'Trial';
+      const isOffer = data.planType === 'Ofa';
+      const isUrgent = daysLeft !== null && daysLeft <= 3;
+      cardEl.style.borderLeftColor = isUrgent ? '#f59e0b' : '#22c55e';
+      contentEl.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <i class="fas fa-check-circle" style="font-size:20px; color:${isUrgent ? '#f59e0b' : '#22c55e'};"></i>
+          <div>
+            <strong style="color:${isUrgent ? '#f59e0b' : '#22c55e'};">
+              ${isTrial ? 'Kipindi cha Majaribio (Free Trial)' : isOffer ? 'Plan ya Ofa' : 'Plan Hai'}
+            </strong><br>
+            <small style="color:#888;">
+              ${hasValidExpiry ? 'Inaisha: ' + parsedExpiry.toLocaleDateString('sw-TZ') + ' ' + parsedExpiry.toLocaleTimeString('sw-TZ', {hour:'2-digit', minute:'2-digit'}) + (timeRemainingText ? ' (' + timeRemainingText + ')' : '') : 'Tarehe ya mwisho haijulikani'}
+            </small>
+          </div>
+        </div>
+        ${isUrgent ? '<p style="margin:10px 0 0; font-size:13px; color:#f59e0b;"><i class="fas fa-exclamation-triangle"></i> Muda wako unakaribia kuisha. Wasiliana na msimamizi wa mfumo kufanya malipo.</p>' : ''}
+      `;
+    } else {
+      cardEl.style.borderLeftColor = '#ef4444';
+      contentEl.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <i class="fas fa-times-circle" style="font-size:20px; color:#ef4444;"></i>
+          <div>
+            <strong style="color:#ef4444;">Muda wa Matumizi Umeisha</strong><br>
+            <small style="color:#888;">Iliisha: ${hasValidExpiry ? parsedExpiry.toLocaleDateString('sw-TZ') : '-'}</small>
+          </div>
+        </div>
+        <p style="margin:10px 0 0; font-size:13px; color:#ef4444;"><i class="fas fa-info-circle"></i> Shughuli za msingi (Wanachama, Miamala, Mikopo) hazitafanya kazi mpaka malipo yafanyike. Wasiliana na msimamizi wa mfumo.</p>
+      `;
+    }
+  })
+  .catch(() => {
+    contentEl.innerHTML = '<span style="color:#94a3b8;">Hitilafu ya mtandao</span>';
+  });
+}
+
 function loadSettings() {
   markDashboardTabLoaded('settings');
+  
+  // Item: Pakia hali ya "Plan" (Muda wa Matumizi)
+  loadPlanStatus();
+  
   // Silent load without loading indicator
   fetchWithTimeout(SCRIPT_URL, {
     method: 'POST',
