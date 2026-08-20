@@ -4333,7 +4333,7 @@ tr:hover {
 
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxXK-mUT2ad8Gp7_dCWq8BRPmeCnGcbpiIjQvI9Na8COs-hS5fGd-CRoQTcTz_0JhJM/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOE-XyUoB4DazWVrvdHbNfQv8l79zr0_21tvkKX4UrVNVJJwiZx31VD0vOO4F2FFnu/exec";
     
     // Item 2: "fetch" yenye "timeout" - inatumika badala ya "fetch" ya kawaida kila
     // mahali panapowasiliana na "server". Kwenye mtandao hafifu (2G n.k), "fetch" ya
@@ -5032,6 +5032,8 @@ function renderDeveloperAccounts() {
         <button class="dp-btn" style="background:rgba(99,102,241,0.15); color:#a5b4fc;" onclick="loadDevAccountStats('${acc.dbId}', ${idx})"><i class="fas fa-chart-bar"></i> Ona Takwimu</button>
         <button class="dp-btn" style="background:rgba(99,102,241,0.15); color:#a5b4fc;" onclick="filterDevActivitiesByAccount('${acc.dbId}', '${safeOrgName}')"><i class="fas fa-history"></i> Ona Activities</button>
         <button class="dp-btn" style="background:rgba(34,197,94,0.15); color:#86efac;" onclick="developerGrantPlanTimeUI('${acc.dbId}', '${safeOrgName}')"><i class="fas fa-hourglass-half"></i> Toa Muda</button>
+        <button class="dp-btn" style="background:rgba(148,163,184,0.15); color:#cbd5e1;" onclick="developerResetPlanToTrialUI('${acc.dbId}', '${safeOrgName}')"><i class="fas fa-undo"></i> Weka Upya (Trial)</button>
+        <button class="dp-btn" style="background:rgba(239,68,68,0.12); color:#fca5a5;" onclick="developerRevokePlanTimeUI('${acc.dbId}', '${safeOrgName}')"><i class="fas fa-ban"></i> Ondoa Muda Kabisa</button>
         <button class="dp-btn dp-btn-warning" onclick="developerResetPasswordUI('${acc.dbId}', '${safeOrgName}')"><i class="fas fa-key"></i> Weka Upya Nenosiri</button>
         <button class="dp-btn dp-btn-danger" onclick="developerDeleteAccountUI('${acc.dbId}', '${safeOrgName}')"><i class="fas fa-trash"></i> Futa Akaunti</button>
         </div>
@@ -5469,6 +5471,82 @@ function devUpdatePlanTimeFormVisibility() {
   } else if (unit !== 'unlimited') {
     amountWrap.classList.remove('hidden');
   }
+}
+
+// Item 1 (upanuzi): "Weka Upya kuwa Trial" - endapo Developer ametoa muda/aina
+// isiyo sahihi kimakosa, hii inarudisha Akaunti kwenye "Free Trial" mpya ya
+// siku 30 kwa urahisi (bila hatua nyingi)
+function developerResetPlanToTrialUI(dbId, orgName) {
+  Swal.fire({
+    title: 'Weka Upya kuwa Trial?',
+    html: `<p>Akaunti ya <strong>${orgName}</strong> itapewa "Free Trial" mpya ya siku 30 kuanzia sasa - hii itaondoa/kubadilisha Plan yoyote iliyopo kwa sasa.</p>`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ndio, Weka Upya',
+    confirmButtonColor: '#64748b',
+    cancelButtonText: 'Ghairi'
+  }).then(result => {
+    if (!result.isConfirmed) return;
+    Notiflix.Loading.standard('Inaweka upya...');
+    fetchWithTimeout(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'developerResetPlanToTrial', devToken: sessionStorage.getItem('devToken'), dbId })
+    })
+    .then(res => res.json())
+    .then(data => {
+      Notiflix.Loading.remove();
+      if (data.status === 'success') {
+        Notiflix.Notify.success(data.message);
+        loadDeveloperAccounts();
+      } else {
+        if (devHandleAuthFailure(data)) return;
+        Notiflix.Notify.failure(data.message);
+      }
+    })
+    .catch((error) => {
+      Notiflix.Loading.remove();
+      console.error('Developer Panel error:', error);
+      Notiflix.Notify.failure('Hitilafu ya mtandao');
+    });
+  });
+}
+
+// Item 1 (upanuzi): "Ondoa Muda Kabisa" - inazuia Akaunti MARA MOJA (kwa
+// haraka), inafaa endapo Developer ametoa muda mwingi/Unlimited kimakosa na
+// anataka kusahihisha kabla ya kutoa muda sahihi upya
+function developerRevokePlanTimeUI(dbId, orgName) {
+  Swal.fire({
+    title: 'Ondoa Muda Kabisa?',
+    html: `<p>Una uhakika unataka kuondoa muda WOTE wa matumizi kwa <strong>${orgName}</strong>? Akaunti hii itazuiwa MARA MOJA (haitaweza kufanya shughuli za msingi) mpaka utoe muda mpya.</p>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ndio, Ondoa Kabisa',
+    confirmButtonColor: '#ef4444',
+    cancelButtonText: 'Ghairi'
+  }).then(result => {
+    if (!result.isConfirmed) return;
+    Notiflix.Loading.standard('Inaondoa...');
+    fetchWithTimeout(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'developerRevokePlanTime', devToken: sessionStorage.getItem('devToken'), dbId })
+    })
+    .then(res => res.json())
+    .then(data => {
+      Notiflix.Loading.remove();
+      if (data.status === 'success') {
+        Notiflix.Notify.success(data.message);
+        loadDeveloperAccounts();
+      } else {
+        if (devHandleAuthFailure(data)) return;
+        Notiflix.Notify.failure(data.message);
+      }
+    })
+    .catch((error) => {
+      Notiflix.Loading.remove();
+      console.error('Developer Panel error:', error);
+      Notiflix.Notify.failure('Hitilafu ya mtandao');
+    });
+  });
 }
 
 function developerResetPasswordUI(dbId, orgName) {
@@ -6522,50 +6600,60 @@ function handleMemberPortalPhotoSelect(event) {
     return;
   }
   
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const img = new Image();
-    img.onload = function() {
-      const MAX_DIM = 400;
-      let { width, height } = img;
-      if (width > height) {
-        if (width > MAX_DIM) { height = Math.round(height * (MAX_DIM / width)); width = MAX_DIM; }
+  // Item 1 (fix wa MUHIMU - kuzuia crash kwenye "App" WebView)
+  if (file.size > 20 * 1024 * 1024) {
+    Notiflix.Notify.failure('Picha ni kubwa mno (zaidi ya 20MB). Tafadhali tumia picha ndogo zaidi.');
+    event.target.value = '';
+    return;
+  }
+  
+  const objectUrl = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = function() {
+    URL.revokeObjectURL(objectUrl);
+    
+    const MAX_DIM = 400;
+    let { width, height } = img;
+    if (width > height) {
+      if (width > MAX_DIM) { height = Math.round(height * (MAX_DIM / width)); width = MAX_DIM; }
+    } else {
+      if (height > MAX_DIM) { width = Math.round(width * (MAX_DIM / height)); height = MAX_DIM; }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+    let dataUri = canvas.toDataURL('image/jpeg', 0.85);
+    dataUri = shrinkDataUriUnderCellLimit(canvas, false, dataUri);
+    
+    Notiflix.Loading.standard('Inahifadhi picha...');
+    fetchWithTimeout(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'updateMemberOwnProfilePicture', dbId: mpDbId, memberId: mpMemberId, profilePicture: dataUri })
+    })
+    .then(res => res.json())
+    .then(data => {
+      Notiflix.Loading.remove();
+      if (data.status === 'success') {
+        showQuickNotification('Picha ya Wasifu imesasishwa');
+        loadMemberPortalData();
       } else {
-        if (height > MAX_DIM) { width = Math.round(width * (MAX_DIM / height)); height = MAX_DIM; }
+        Notiflix.Notify.failure(data.message || 'Imeshindwa kuhifadhi picha');
       }
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(img, 0, 0, width, height);
-      let dataUri = canvas.toDataURL('image/jpeg', 0.85);
-      dataUri = shrinkDataUriUnderCellLimit(canvas, false, dataUri);
-      
-      Notiflix.Loading.standard('Inahifadhi picha...');
-      fetchWithTimeout(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'updateMemberOwnProfilePicture', dbId: mpDbId, memberId: mpMemberId, profilePicture: dataUri })
-      })
-      .then(res => res.json())
-      .then(data => {
-        Notiflix.Loading.remove();
-        if (data.status === 'success') {
-          showQuickNotification('Picha ya Wasifu imesasishwa');
-          loadMemberPortalData();
-        } else {
-          Notiflix.Notify.failure(data.message || 'Imeshindwa kuhifadhi picha');
-        }
-      })
-      .catch(() => {
-        Notiflix.Loading.remove();
-        Notiflix.Notify.failure('Imeshindwa kuhifadhi picha');
-      });
-    };
-    img.src = e.target.result;
+    })
+    .catch(() => {
+      Notiflix.Loading.remove();
+      Notiflix.Notify.failure('Imeshindwa kuhifadhi picha');
+    });
   };
-  reader.readAsDataURL(file);
+  img.onerror = function() {
+    URL.revokeObjectURL(objectUrl);
+    Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo');
+  };
+  img.src = objectUrl;
   event.target.value = '';
 }
 
@@ -7253,6 +7341,11 @@ function showMainDashboard() {
   document.getElementById('mainDashboard').classList.remove('hidden');
   const mpOverlay = document.getElementById('memberPortalOverlay');
   if (mpOverlay) mpOverlay.remove();
+  
+  // Item 1: Anzisha "polling" ya kimya ya hali ya "Plan" - itamjulisha
+  // Msimamizi papo hapo endapo Developer amebadilisha muda wake, popote
+  // alipo kwenye "dashboard" (siyo "Settings" tab pekee)
+  startPlanStatusPolling();
   
   // Update organization name and email
   document.getElementById('organizationName').textContent = currentOrganization;
@@ -8134,6 +8227,7 @@ function logout() {
       currentUserEmail = '';
       currentMemberAccount = null;
       isViewingMemberAccount = false;
+      stopPlanStatusPolling();
       
       Notiflix.Notify.success('Umefanikiwa kutoka');
       showLogin();
@@ -9098,59 +9192,63 @@ function handleMemberPhotoSelect(event, context) {
     return;
   }
   
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const img = new Image();
-    img.onload = function() {
-      // Punguza picha kwenda vipimo vinavyofaa kwa "picha ya wasifu" (mraba, hadi
-      // 400px) kwa kutumia "canvas", kisha "compress" kama JPEG
-      const MAX_DIM = 400;
-      let { width, height } = img;
-      if (width > height) {
-        if (width > MAX_DIM) { height = Math.round(height * (MAX_DIM / width)); width = MAX_DIM; }
-      } else {
-        if (height > MAX_DIM) { width = Math.round(width * (MAX_DIM / height)); height = MAX_DIM; }
-      }
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      let dataUri = canvas.toDataURL('image/jpeg', 0.85);
-      // Hakikisha haizidi kikomo cha "cell" ya Google Sheets (herufi 50,000) -
-      // function hii tayari ipo (inatumika na Logo/Muhuri/Sahihi)
-      dataUri = shrinkDataUriUnderCellLimit(canvas, false, dataUri);
-      
-      if (context === 'edit') {
-        editMemberPhotoState = dataUri;
-      } else {
-        pendingMemberPhotoDataUri = dataUri;
-      }
-      
-      const previewImg = context === 'edit' ? document.getElementById('editMemberPhotoPreviewImg') : document.getElementById('memberPhotoPreviewImg');
-      const placeholderIcon = context === 'edit' ? document.getElementById('editMemberPhotoPlaceholderIcon') : document.getElementById('memberPhotoPlaceholderIcon');
-      const removeBtn = context === 'edit' ? document.getElementById('editMemberPhotoRemoveBtn') : document.getElementById('memberPhotoRemoveBtn');
-      
-      if (previewImg) {
-        previewImg.src = dataUri;
-        previewImg.style.display = 'block';
-      }
-      if (placeholderIcon) placeholderIcon.style.display = 'none';
-      if (removeBtn) removeBtn.classList.remove('hidden');
-    };
-    img.onerror = function() {
-      Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo');
-    };
-    img.src = e.target.result;
+  // Item 1 (fix wa MUHIMU - kuzuia crash kwenye "App" WebView)
+  if (file.size > 20 * 1024 * 1024) {
+    Notiflix.Notify.failure('Picha ni kubwa mno (zaidi ya 20MB). Tafadhali tumia picha ndogo zaidi.');
+    event.target.value = '';
+    return;
+  }
+  
+  const objectUrl = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = function() {
+    URL.revokeObjectURL(objectUrl);
+    
+    // Punguza picha kwenda vipimo vinavyofaa kwa "picha ya wasifu" (mraba, hadi
+    // 400px) kwa kutumia "canvas", kisha "compress" kama JPEG
+    const MAX_DIM = 400;
+    let { width, height } = img;
+    if (width > height) {
+      if (width > MAX_DIM) { height = Math.round(height * (MAX_DIM / width)); width = MAX_DIM; }
+    } else {
+      if (height > MAX_DIM) { width = Math.round(width * (MAX_DIM / height)); height = MAX_DIM; }
+    }
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+    
+    let dataUri = canvas.toDataURL('image/jpeg', 0.85);
+    // Hakikisha haizidi kikomo cha "cell" ya Google Sheets (herufi 50,000) -
+    // function hii tayari ipo (inatumika na Logo/Muhuri/Sahihi)
+    dataUri = shrinkDataUriUnderCellLimit(canvas, false, dataUri);
+    
+    if (context === 'edit') {
+      editMemberPhotoState = dataUri;
+    } else {
+      pendingMemberPhotoDataUri = dataUri;
+    }
+    
+    const previewImg = context === 'edit' ? document.getElementById('editMemberPhotoPreviewImg') : document.getElementById('memberPhotoPreviewImg');
+    const placeholderIcon = context === 'edit' ? document.getElementById('editMemberPhotoPlaceholderIcon') : document.getElementById('memberPhotoPlaceholderIcon');
+    const removeBtn = context === 'edit' ? document.getElementById('editMemberPhotoRemoveBtn') : document.getElementById('memberPhotoRemoveBtn');
+    
+    if (previewImg) {
+      previewImg.src = dataUri;
+      previewImg.style.display = 'block';
+    }
+    if (placeholderIcon) placeholderIcon.style.display = 'none';
+    if (removeBtn) removeBtn.classList.remove('hidden');
   };
-  reader.onerror = function() {
+  img.onerror = function() {
+    URL.revokeObjectURL(objectUrl);
     Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo');
   };
-  reader.readAsDataURL(file);
+  img.src = objectUrl;
   event.target.value = '';
 }
 
@@ -12343,67 +12441,70 @@ function handleLogoFileSelect(event) {
     return;
   }
   
+  // Item 1 (fix wa MUHIMU - kuzuia crash kwenye "App" WebView)
+  if (file.size > 20 * 1024 * 1024) {
+    Notiflix.Notify.failure('Picha ni kubwa mno (zaidi ya 20MB). Tafadhali tumia picha ndogo zaidi.');
+    return;
+  }
+  
   // Picha zenye "transparency" (PNG, GIF, WebP) zibaki transparent - background nyeupe
   // isijazwe kwa lazima, la sivyo inafunika maandishi yaliyopo chini yake (mfano Muhuri
   // "overlay" kwenye Fomu/Mkataba)
   const supportsTransparency = ['image/png', 'image/gif', 'image/webp'].includes(file.type);
   
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const img = new Image();
-    img.onload = function() {
-      const maxDim = 300;
-      let width = img.width;
-      let height = img.height;
-      
-      if (width > height) {
-        if (width > maxDim) {
-          height = Math.round(height * (maxDim / width));
-          width = maxDim;
-        }
-      } else {
-        if (height > maxDim) {
-          width = Math.round(width * (maxDim / height));
-          height = maxDim;
-        }
+  const objectUrl = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = function() {
+    URL.revokeObjectURL(objectUrl);
+    
+    const maxDim = 300;
+    let width = img.width;
+    let height = img.height;
+    
+    if (width > height) {
+      if (width > maxDim) {
+        height = Math.round(height * (maxDim / width));
+        width = maxDim;
       }
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!supportsTransparency) {
-        // JPEG haina "transparency" tayari - background nyeupe hapa haiondoi kitu
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, width, height);
+    } else {
+      if (height > maxDim) {
+        width = Math.round(width * (maxDim / height));
+        height = maxDim;
       }
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      pendingLogoDataUri = supportsTransparency
-        ? canvas.toDataURL('image/png')
-        : canvas.toDataURL('image/jpeg', 0.85);
-      
-      // Item 1: ikiwa picha bado inazidi kikomo cha "cell" ya Google Sheets (herufi
-      // 50,000), punguza ukubwa wake kiotomatiki mpaka itoshee
-      pendingLogoDataUri = shrinkDataUriUnderCellLimit(canvas, supportsTransparency, pendingLogoDataUri);
-      
-      const previewImg = document.getElementById('logoPreviewImg');
-      const noLogoMsg = document.getElementById('logoNoLogoMsg');
-      previewImg.src = pendingLogoDataUri;
-      previewImg.style.display = 'block';
-      if (noLogoMsg) noLogoMsg.style.display = 'none';
-      
-      document.getElementById('saveLogoBtn').disabled = false;
-    };
-    img.onerror = function() {
-      Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo. Jaribu picha nyingine.');
-    };
-    img.src = e.target.result;
+    }
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!supportsTransparency) {
+      // JPEG haina "transparency" tayari - background nyeupe hapa haiondoi kitu
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+    }
+    ctx.drawImage(img, 0, 0, width, height);
+    
+    pendingLogoDataUri = supportsTransparency
+      ? canvas.toDataURL('image/png')
+      : canvas.toDataURL('image/jpeg', 0.85);
+    
+    // Item 1: ikiwa picha bado inazidi kikomo cha "cell" ya Google Sheets (herufi
+    // 50,000), punguza ukubwa wake kiotomatiki mpaka itoshee
+    pendingLogoDataUri = shrinkDataUriUnderCellLimit(canvas, supportsTransparency, pendingLogoDataUri);
+    
+    const previewImg = document.getElementById('logoPreviewImg');
+    const noLogoMsg = document.getElementById('logoNoLogoMsg');
+    previewImg.src = pendingLogoDataUri;
+    previewImg.style.display = 'block';
+    if (noLogoMsg) noLogoMsg.style.display = 'none';
+    
+    document.getElementById('saveLogoBtn').disabled = false;
   };
-  reader.onerror = function() {
-    Notiflix.Notify.failure('Imeshindwa kusoma faili hiyo');
+  img.onerror = function() {
+    URL.revokeObjectURL(objectUrl);
+    Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo. Jaribu picha nyingine.');
   };
-  reader.readAsDataURL(file);
+  img.src = objectUrl;
 }
 
 function saveOrganizationLogo() {
@@ -12510,62 +12611,65 @@ function handleStampFileSelect(event) {
     return;
   }
   
+  // Item 1 (fix wa MUHIMU - kuzuia crash kwenye "App" WebView)
+  if (file.size > 20 * 1024 * 1024) {
+    Notiflix.Notify.failure('Picha ni kubwa mno (zaidi ya 20MB). Tafadhali tumia picha ndogo zaidi.');
+    return;
+  }
+  
   // Muhuri KAWAIDA ni PNG yenye "transparency" (ndiyo maana inaelea juu ya maandishi
   // bila kuyafunika) - background nyeupe isijazwe kwa lazima, la sivyo transparency
   // yote inapotea na Muhuri unafunika maandishi yaliyopo chini yake
   const supportsTransparency = ['image/png', 'image/gif', 'image/webp'].includes(file.type);
   
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const img = new Image();
-    img.onload = function() {
-      const maxDim = 300;
-      let width = img.width;
-      let height = img.height;
-      
-      if (width > height) {
-        if (width > maxDim) {
-          height = Math.round(height * (maxDim / width));
-          width = maxDim;
-        }
-      } else {
-        if (height > maxDim) {
-          width = Math.round(width * (maxDim / height));
-          height = maxDim;
-        }
+  const objectUrl = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = function() {
+    URL.revokeObjectURL(objectUrl);
+    
+    const maxDim = 300;
+    let width = img.width;
+    let height = img.height;
+    
+    if (width > height) {
+      if (width > maxDim) {
+        height = Math.round(height * (maxDim / width));
+        width = maxDim;
       }
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      if (!supportsTransparency) {
-        // JPG haina "transparency" asili - ondoa background yake KIOTOMATIKI
-        autoRemoveSolidBackground(canvas);
+    } else {
+      if (height > maxDim) {
+        width = Math.round(width * (maxDim / height));
+        height = maxDim;
       }
-      
-      pendingStampDataUri = canvas.toDataURL('image/png');
-      
-      // Item 1: ikiwa picha bado inazidi kikomo cha "cell" ya Google Sheets (herufi
-      // 50,000), punguza ukubwa wake kiotomatiki mpaka itoshee
-      pendingStampDataUri = shrinkDataUriUnderCellLimit(canvas, true, pendingStampDataUri);
-      
-      const previewImg = document.getElementById('stampPreviewImg');
-      const noStampMsg = document.getElementById('stampNoStampMsg');
-      previewImg.src = pendingStampDataUri;
-      previewImg.style.display = 'block';
-      if (noStampMsg) noStampMsg.style.display = 'none';
-    };
-    img.onerror = function() {
-      Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo. Jaribu picha nyingine.');
-    };
-    img.src = e.target.result;
+    }
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, width, height);
+    if (!supportsTransparency) {
+      // JPG haina "transparency" asili - ondoa background yake KIOTOMATIKI
+      autoRemoveSolidBackground(canvas);
+    }
+    
+    pendingStampDataUri = canvas.toDataURL('image/png');
+    
+    // Item 1: ikiwa picha bado inazidi kikomo cha "cell" ya Google Sheets (herufi
+    // 50,000), punguza ukubwa wake kiotomatiki mpaka itoshee
+    pendingStampDataUri = shrinkDataUriUnderCellLimit(canvas, true, pendingStampDataUri);
+    
+    const previewImg = document.getElementById('stampPreviewImg');
+    const noStampMsg = document.getElementById('stampNoStampMsg');
+    previewImg.src = pendingStampDataUri;
+    previewImg.style.display = 'block';
+    if (noStampMsg) noStampMsg.style.display = 'none';
   };
-  reader.onerror = function() {
-    Notiflix.Notify.failure('Imeshindwa kusoma faili hiyo');
+  img.onerror = function() {
+    URL.revokeObjectURL(objectUrl);
+    Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo. Jaribu picha nyingine.');
   };
-  reader.readAsDataURL(file);
+  img.src = objectUrl;
 }
 
 function saveOrganizationStamp() {
@@ -12668,61 +12772,64 @@ function handleSignatureFileSelect(event) {
     return;
   }
   
+  // Item 1 (fix wa MUHIMU - kuzuia crash kwenye "App" WebView)
+  if (file.size > 20 * 1024 * 1024) {
+    Notiflix.Notify.failure('Picha ni kubwa mno (zaidi ya 20MB). Tafadhali tumia picha ndogo zaidi.');
+    return;
+  }
+  
   // Sahihi KAWAIDA ni PNG yenye "transparency" - background nyeupe isijazwe kwa lazima
   const supportsTransparency = ['image/png', 'image/gif', 'image/webp'].includes(file.type);
   
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const img = new Image();
-    img.onload = function() {
-      const maxDim = 300;
-      let width = img.width;
-      let height = img.height;
-      
-      if (width > height) {
-        if (width > maxDim) {
-          height = Math.round(height * (maxDim / width));
-          width = maxDim;
-        }
-      } else {
-        if (height > maxDim) {
-          width = Math.round(width * (maxDim / height));
-          height = maxDim;
-        }
+  const objectUrl = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = function() {
+    URL.revokeObjectURL(objectUrl);
+    
+    const maxDim = 300;
+    let width = img.width;
+    let height = img.height;
+    
+    if (width > height) {
+      if (width > maxDim) {
+        height = Math.round(height * (maxDim / width));
+        width = maxDim;
       }
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      if (!supportsTransparency) {
-        // JPG haina "transparency" asili - ondoa background yake KIOTOMATIKI (mfano
-        // background nyeusi kwenye Sahihi) badala ya kuijaza rangi nyeupe
-        autoRemoveSolidBackground(canvas);
+    } else {
+      if (height > maxDim) {
+        width = Math.round(width * (maxDim / height));
+        height = maxDim;
       }
-      
-      pendingSignatureDataUri = canvas.toDataURL('image/png');
-      
-      // Item 1: ikiwa picha bado inazidi kikomo cha "cell" ya Google Sheets (herufi
-      // 50,000), punguza ukubwa wake kiotomatiki mpaka itoshee
-      pendingSignatureDataUri = shrinkDataUriUnderCellLimit(canvas, true, pendingSignatureDataUri);
-      
-      const previewImg = document.getElementById('signaturePreviewImg');
-      const noSignatureMsg = document.getElementById('signatureNoSignatureMsg');
-      previewImg.src = pendingSignatureDataUri;
-      previewImg.style.display = 'block';
-      if (noSignatureMsg) noSignatureMsg.style.display = 'none';
-    };
-    img.onerror = function() {
-      Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo. Jaribu picha nyingine.');
-    };
-    img.src = e.target.result;
+    }
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, width, height);
+    if (!supportsTransparency) {
+      // JPG haina "transparency" asili - ondoa background yake KIOTOMATIKI (mfano
+      // background nyeusi kwenye Sahihi) badala ya kuijaza rangi nyeupe
+      autoRemoveSolidBackground(canvas);
+    }
+    
+    pendingSignatureDataUri = canvas.toDataURL('image/png');
+    
+    // Item 1: ikiwa picha bado inazidi kikomo cha "cell" ya Google Sheets (herufi
+    // 50,000), punguza ukubwa wake kiotomatiki mpaka itoshee
+    pendingSignatureDataUri = shrinkDataUriUnderCellLimit(canvas, true, pendingSignatureDataUri);
+    
+    const previewImg = document.getElementById('signaturePreviewImg');
+    const noSignatureMsg = document.getElementById('signatureNoSignatureMsg');
+    previewImg.src = pendingSignatureDataUri;
+    previewImg.style.display = 'block';
+    if (noSignatureMsg) noSignatureMsg.style.display = 'none';
   };
-  reader.onerror = function() {
-    Notiflix.Notify.failure('Imeshindwa kusoma faili hiyo');
+  img.onerror = function() {
+    URL.revokeObjectURL(objectUrl);
+    Notiflix.Notify.failure('Imeshindwa kusoma picha hiyo. Jaribu picha nyingine.');
   };
-  reader.readAsDataURL(file);
+  img.src = objectUrl;
 }
 
 function saveLoanOfficerSignature() {
@@ -13900,9 +14007,68 @@ function formatTimeRemaining(msRemaining) {
   }
 }
 
+// Item 1: "Polling" ya kimya kila sekunde 3 - inagundua mabadiliko ya "Plan"
+// yaliyofanywa na Developer (kutoa muda, kuondoa muda, n.k) na kuyaonesha kwa
+// Msimamizi PAPO HAPO, bila kusubiri "refresh" ya ukurasa. Inafanya kazi hata
+// endapo Msimamizi hayupo kwenye "Settings" tab - itamjulisha popote alipo.
+let planPollingInterval = null;
+let lastKnownPlanState = null; // {active, expiryDate, planType} - kwa kulinganisha
+
+function startPlanStatusPolling() {
+  if (planPollingInterval) return; // tayari inaendesha - usianze mara mbili
+  if (!currentDbId) return;
+  
+  planPollingInterval = setInterval(() => {
+    if (!currentDbId) return; // Msimamizi ametoka - acha "polling"
+    
+    fetchWithTimeout(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getAccountPlanStatus', dbId: currentDbId })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status !== 'success') return; // kimya - usimsumbue kwa hitilafu ya "background"
+      
+      const newState = { active: data.active, expiryDate: data.expiryDate, planType: data.planType };
+      
+      if (lastKnownPlanState !== null) {
+        const changed = lastKnownPlanState.active !== newState.active
+          || lastKnownPlanState.expiryDate !== newState.expiryDate
+          || lastKnownPlanState.planType !== newState.planType;
+        
+        if (changed) {
+          // Item 1: Mabadiliko yamegundulika - onesha kwa Msimamizi PAPO HAPO
+          if (!lastKnownPlanState.active && newState.active) {
+            Notiflix.Notify.success('Muda wa matumizi umeongezwa! Sasa unaweza kuendelea kutumia mfumo.');
+          } else if (lastKnownPlanState.active && !newState.active) {
+            showPlanExpiredAlert();
+          } else if (newState.active) {
+            Notiflix.Notify.info('Plan yako imesasishwa na Msimamizi wa Mfumo.');
+          }
+          
+          // Sasisha kadi ya "Settings" PAPO HAPO endapo iko wazi kwa sasa
+          if (document.getElementById('planStatusContent')) {
+            renderPlanStatusFromData(data);
+          }
+        }
+      }
+      
+      lastKnownPlanState = newState;
+    })
+    .catch(() => {}); // kimya kabisa - usisumbue kwa hitilafu ya mtandao ya "background"
+  }, 3000); // sekunde 3
+}
+
+function stopPlanStatusPolling() {
+  if (planPollingInterval) {
+    clearInterval(planPollingInterval);
+    planPollingInterval = null;
+  }
+  lastKnownPlanState = null;
+}
+
 function loadPlanStatus() {
   const contentEl = document.getElementById('planStatusContent');
-  const cardEl = document.getElementById('planStatusCard');
   if (!contentEl) return;
   
   fetchWithTimeout(SCRIPT_URL, {
@@ -13916,65 +14082,80 @@ function loadPlanStatus() {
       return;
     }
     
-    if (data.planType === 'Unlimited') {
-      cardEl.style.borderLeftColor = '#22c55e';
-      contentEl.innerHTML = `
-        <div style="display:flex; align-items:center; gap:10px;">
-          <i class="fas fa-infinity" style="font-size:20px; color:#22c55e;"></i>
-          <div>
-            <strong style="color:#22c55e;">Bila Kikomo (Unlimited)</strong><br>
-            <small style="color:#888;">Akaunti yako haina ukomo wa muda</small>
-          </div>
-        </div>
-      `;
-      return;
-    }
+    // Item 1: Weka hali ya sasa kama "msingi" wa kulinganisha kwa "polling"
+    // (endapo hii ndiyo mara ya kwanza kupakia, au ili "polling" isione hii
+    // kama "mabadiliko" ya ghafla)
+    lastKnownPlanState = { active: data.active, expiryDate: data.expiryDate, planType: data.planType };
     
-    // Item (fix): Endapo tarehe haisomeki vizuri (isiyotarajiwa), usimwambie
-    // mtumiaji "imeisha" kimakosa - onesha "haijulikani" badala yake, ili
-    // asishtuke bure endapo Plan yake bado ni hai kihalisia
-    const parsedExpiry = data.expiryDate ? new Date(data.expiryDate) : null;
-    const hasValidExpiry = parsedExpiry && !isNaN(parsedExpiry.getTime());
-    
-    if (data.active) {
-      const msRemaining = hasValidExpiry ? (parsedExpiry.getTime() - new Date().getTime()) : null;
-      const timeRemainingText = msRemaining !== null ? formatTimeRemaining(msRemaining) : null;
-      const daysLeft = msRemaining !== null ? Math.floor(msRemaining / (1000 * 60 * 60 * 24)) : null;
-      const isTrial = data.planType === 'Trial';
-      const isOffer = data.planType === 'Ofa';
-      const isUrgent = daysLeft !== null && daysLeft <= 3;
-      cardEl.style.borderLeftColor = isUrgent ? '#f59e0b' : '#22c55e';
-      contentEl.innerHTML = `
-        <div style="display:flex; align-items:center; gap:10px;">
-          <i class="fas fa-check-circle" style="font-size:20px; color:${isUrgent ? '#f59e0b' : '#22c55e'};"></i>
-          <div>
-            <strong style="color:${isUrgent ? '#f59e0b' : '#22c55e'};">
-              ${isTrial ? 'Kipindi cha Majaribio (Free Trial)' : isOffer ? 'Plan ya Ofa' : 'Plan Hai'}
-            </strong><br>
-            <small style="color:#888;">
-              ${hasValidExpiry ? 'Inaisha: ' + parsedExpiry.toLocaleDateString('sw-TZ') + ' ' + parsedExpiry.toLocaleTimeString('sw-TZ', {hour:'2-digit', minute:'2-digit'}) + (timeRemainingText ? ' (' + timeRemainingText + ')' : '') : 'Tarehe ya mwisho haijulikani'}
-            </small>
-          </div>
-        </div>
-        ${isUrgent ? '<p style="margin:10px 0 0; font-size:13px; color:#f59e0b;"><i class="fas fa-exclamation-triangle"></i> Muda wako unakaribia kuisha. Wasiliana na msimamizi wa mfumo kufanya malipo.</p>' : ''}
-      `;
-    } else {
-      cardEl.style.borderLeftColor = '#ef4444';
-      contentEl.innerHTML = `
-        <div style="display:flex; align-items:center; gap:10px;">
-          <i class="fas fa-times-circle" style="font-size:20px; color:#ef4444;"></i>
-          <div>
-            <strong style="color:#ef4444;">Muda wa Matumizi Umeisha</strong><br>
-            <small style="color:#888;">Iliisha: ${hasValidExpiry ? parsedExpiry.toLocaleDateString('sw-TZ') : '-'}</small>
-          </div>
-        </div>
-        <p style="margin:10px 0 0; font-size:13px; color:#ef4444;"><i class="fas fa-info-circle"></i> Shughuli za msingi (Wanachama, Miamala, Mikopo) hazitafanya kazi mpaka malipo yafanyike. Wasiliana na msimamizi wa mfumo.</p>
-      `;
-    }
+    renderPlanStatusFromData(data);
   })
   .catch(() => {
     contentEl.innerHTML = '<span style="color:#94a3b8;">Hitilafu ya mtandao</span>';
   });
+}
+
+// Item 1: "Rendering" pekee (bila kuomba "server") - inatumika na "loadPlanStatus"
+// (upakiaji wa kwanza) NA "polling" ya kimya (sasisho la papo hapo)
+function renderPlanStatusFromData(data) {
+  const contentEl = document.getElementById('planStatusContent');
+  const cardEl = document.getElementById('planStatusCard');
+  if (!contentEl || !cardEl) return; // Msimamizi hayupo kwenye "Settings" sasa hivi - hakuna cha kusasisha
+  
+  if (data.planType === 'Unlimited') {
+    cardEl.style.borderLeftColor = '#22c55e';
+    contentEl.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px;">
+        <i class="fas fa-infinity" style="font-size:20px; color:#22c55e;"></i>
+        <div>
+          <strong style="color:#22c55e;">Bila Kikomo (Unlimited)</strong><br>
+          <small style="color:#888;">Akaunti yako haina ukomo wa muda</small>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  
+  // Item (fix): Endapo tarehe haisomeki vizuri (isiyotarajiwa), usimwambie
+  // mtumiaji "imeisha" kimakosa - onesha "haijulikani" badala yake, ili
+  // asishtuke bure endapo Plan yake bado ni hai kihalisia
+  const parsedExpiry = data.expiryDate ? new Date(data.expiryDate) : null;
+  const hasValidExpiry = parsedExpiry && !isNaN(parsedExpiry.getTime());
+  
+  if (data.active) {
+    const msRemaining = hasValidExpiry ? (parsedExpiry.getTime() - new Date().getTime()) : null;
+    const timeRemainingText = msRemaining !== null ? formatTimeRemaining(msRemaining) : null;
+    const daysLeft = msRemaining !== null ? Math.floor(msRemaining / (1000 * 60 * 60 * 24)) : null;
+    const isTrial = data.planType === 'Trial';
+    const isOffer = data.planType === 'Ofa';
+    const isUrgent = daysLeft !== null && daysLeft <= 3;
+    cardEl.style.borderLeftColor = isUrgent ? '#f59e0b' : '#22c55e';
+    contentEl.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px;">
+        <i class="fas fa-check-circle" style="font-size:20px; color:${isUrgent ? '#f59e0b' : '#22c55e'};"></i>
+        <div>
+          <strong style="color:${isUrgent ? '#f59e0b' : '#22c55e'};">
+            ${isTrial ? 'Kipindi cha Majaribio (Free Trial)' : isOffer ? 'Plan ya Ofa' : 'Plan Hai'}
+          </strong><br>
+          <small style="color:#888;">
+            ${hasValidExpiry ? 'Inaisha: ' + parsedExpiry.toLocaleDateString('sw-TZ') + ' ' + parsedExpiry.toLocaleTimeString('sw-TZ', {hour:'2-digit', minute:'2-digit'}) + (timeRemainingText ? ' (' + timeRemainingText + ')' : '') : 'Tarehe ya mwisho haijulikani'}
+          </small>
+        </div>
+      </div>
+      ${isUrgent ? '<p style="margin:10px 0 0; font-size:13px; color:#f59e0b;"><i class="fas fa-exclamation-triangle"></i> Muda wako unakaribia kuisha. Wasiliana na msimamizi wa mfumo kufanya malipo.</p>' : ''}
+    `;
+  } else {
+    cardEl.style.borderLeftColor = '#ef4444';
+    contentEl.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px;">
+        <i class="fas fa-times-circle" style="font-size:20px; color:#ef4444;"></i>
+        <div>
+          <strong style="color:#ef4444;">Muda wa Matumizi Umeisha</strong><br>
+          <small style="color:#888;">Iliisha: ${hasValidExpiry ? parsedExpiry.toLocaleDateString('sw-TZ') : '-'}</small>
+        </div>
+      </div>
+      <p style="margin:10px 0 0; font-size:13px; color:#ef4444;"><i class="fas fa-info-circle"></i> Shughuli za msingi (Wanachama, Miamala, Mikopo) hazitafanya kazi mpaka malipo yafanyike. Wasiliana na msimamizi wa mfumo.</p>
+    `;
+  }
 }
 
 function loadSettings() {
