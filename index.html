@@ -3583,6 +3583,18 @@ tr:hover {
       <i class="fas fa-spinner fa-spin"></i> Inapakia...
     </div>
   </div>
+
+  <!-- SUBSCRIPTION: separate from all financial records and accounting functions -->
+  <div class="chart-container" id="financialPlanCard" style="border-left:4px solid #16a34a;">
+    <h4><i class="fas fa-wallet"></i> Lipa kwa Simu</h4>
+    <p style="font-size:13px;color:#64748b;margin:4px 0 14px;">Chagua muda wa matumizi ya Financial System. Muda utaongezwa baada ya malipo kuthibitishwa.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;">
+      <button class="btn btn-primary" type="button" onclick="financialEasyPayStart('MONTH_1')">Mwezi 1 — TSh 10,000</button>
+      <button class="btn btn-primary" type="button" onclick="financialEasyPayStart('MONTH_3')">Miezi 3 — TSh 25,000</button>
+      <button class="btn btn-primary" type="button" onclick="financialEasyPayStart('MONTH_6')">Miezi 6 — TSh 45,000</button>
+      <button class="btn btn-primary" type="button" onclick="financialEasyPayStart('YEAR_1')">Mwaka 1 — TSh 80,000</button>
+    </div>
+  </div>
   
   <!-- Organization Settings -->
   <div class="chart-container">
@@ -4330,7 +4342,7 @@ tr:hover {
 
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSegVSSisfck2x-9AriFFMfI3_OqzPPYY69WFIiXWHJ6VCMJvKdFMS9qeSMDb8cWO6/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaeA_A62Kvi6u_PurGaeYyE1AwW9SrYPVI31GPw_hlpOZEBaOWizXX9tZX_YzZAR5L/exec";
     
     // Item 2: "fetch" yenye "timeout" - inatumika badala ya "fetch" ya kawaida kila
     // mahali panapowasiliana na "server". Kwenye mtandao hafifu (2G n.k), "fetch" ya
@@ -5289,7 +5301,39 @@ function developerRestoreAccountUI(dbId, orgName) {
 function renderDeveloperSettingsTab() {
   const content = document.getElementById('devContent');
   content.innerHTML = `
-    <div class="dp-account-card" style="max-width:400px;">
+    <div class="dp-account-card" style="max-width:620px; margin-bottom:16px;">
+      <h4><i class="fas fa-credit-card"></i> EasyPay Configuration</h4>
+      <p style="font-size:12px; color:#94a3b8; line-height:1.6; margin:8px 0 14px;">
+        Taarifa hizi huhifadhiwa moja kwa moja kwenye Google Apps Script Script Properties.
+        Secret zilizohifadhiwa hazionyeshwi tena hapa. Acha sehemu ya siri wazi ikiwa hutaki kubadilisha thamani iliyopo.
+      </p>
+      <div id="devEasyPayConfigStatus" style="font-size:12px; color:#cbd5e1; margin-bottom:12px;">
+        <i class="fas fa-spinner fa-spin"></i> Inakagua mipangilio...
+      </div>
+      <label style="display:block; font-size:12px; color:#cbd5e1; margin:10px 0 6px;">Payment Environment</label>
+      <select id="devEasyPayMode" style="width:100%; padding:11px 12px; border-radius:10px; border:1px solid rgba(148,163,184,.25); background:#0b0f1e; color:#fff; margin-bottom:10px;">
+        <option value="TEST">TEST – Majaribio</option>
+        <option value="LIVE">LIVE – Malipo halisi</option>
+      </select>
+      <label style="display:block; font-size:12px; color:#cbd5e1; margin:10px 0 6px;">EasyPay API Key</label>
+      <input type="password" id="devEasyPayApiKey" autocomplete="new-password" placeholder="Weka API Key (acha wazi kuhifadhi iliyopo)">
+      <label style="display:block; font-size:12px; color:#cbd5e1; margin:4px 0 6px;">EasyPay Secret Key</label>
+      <input type="password" id="devEasyPaySecretKey" autocomplete="new-password" placeholder="Weka Secret Key (acha wazi kuhifadhi iliyopo)">
+      <label style="display:block; font-size:12px; color:#cbd5e1; margin:4px 0 6px;">Webhook Proxy Token</label>
+      <input type="password" id="devEasyPayProxyToken" autocomplete="new-password" placeholder="Token ya siri – angalau herufi 24">
+      <p style="font-size:11px; color:#94a3b8; line-height:1.5; margin:0 0 12px;">
+        Token hii lazima iwe na thamani ileile ya <b>GAS_PROXY_TOKEN</b> kwenye Cloudflare Worker ya Financial System.
+        Usitumie token ya Tanzania Results System.
+      </p>
+      <button class="dp-btn dp-btn-warning" id="devEasyPaySaveBtn" onclick="saveDeveloperEasyPayConfig()">
+        <i class="fas fa-save"></i> Hifadhi EasyPay Settings
+      </button>
+      <button class="dp-btn" style="margin-left:6px; background:rgba(148,163,184,.15); color:#e2e8f0;" onclick="loadDeveloperEasyPayConfig()">
+        <i class="fas fa-sync"></i> Refresh Status
+      </button>
+    </div>
+
+    <div class="dp-account-card" style="max-width:620px;">
       <h4><i class="fas fa-key"></i> Badilisha Nenosiri la Developer</h4>
       <div style="margin-top:12px;">
         <input type="password" id="devCurrentPwd" placeholder="Nenosiri la sasa">
@@ -5302,6 +5346,86 @@ function renderDeveloperSettingsTab() {
       </div>
     </div>
   `;
+  loadDeveloperEasyPayConfig();
+}
+
+function loadDeveloperEasyPayConfig() {
+  const statusEl = document.getElementById('devEasyPayConfigStatus');
+  if (!statusEl) return;
+  statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Inakagua mipangilio...';
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'getFinancialEasyPayDeveloperConfig',
+      devToken: sessionStorage.getItem('devToken')
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status !== 'success') {
+      if (devHandleAuthFailure(data)) return;
+      statusEl.textContent = data.message || 'Imeshindwa kusoma hali ya mipangilio.';
+      return;
+    }
+    const c = data.config || {};
+    const mark = v => v ? '<span style="color:#86efac;">IMEWEKWA</span>' : '<span style="color:#fca5a5;">HAIJAWEKWA</span>';
+    statusEl.innerHTML =
+      '<div style="line-height:1.9;">API Key: ' + mark(c.apiKeyConfigured) +
+      '<br>Secret Key: ' + mark(c.secretKeyConfigured) +
+      '<br>Webhook Proxy Token: ' + mark(c.webhookProxyTokenConfigured) +
+      '<br>Environment: <b>' + (c.paymentMode === 'LIVE' ? 'LIVE' : 'TEST') + '</b></div>';
+    const mode = document.getElementById('devEasyPayMode');
+    if (mode) mode.value = c.paymentMode === 'LIVE' ? 'LIVE' : 'TEST';
+  })
+  .catch(err => {
+    console.error('EasyPay Developer config:', err);
+    statusEl.textContent = 'Hitilafu ya mtandao wakati wa kukagua mipangilio.';
+  });
+}
+
+function saveDeveloperEasyPayConfig() {
+  const mode = document.getElementById('devEasyPayMode').value;
+  const apiKey = document.getElementById('devEasyPayApiKey').value.trim();
+  const secretKey = document.getElementById('devEasyPaySecretKey').value.trim();
+  const webhookProxyToken = document.getElementById('devEasyPayProxyToken').value.trim();
+  if (webhookProxyToken && webhookProxyToken.length < 24) {
+    Notiflix.Notify.failure('Webhook Proxy Token iwe na angalau herufi 24.');
+    return;
+  }
+  const btn = document.getElementById('devEasyPaySaveBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Inahifadhi...'; }
+  fetchWithTimeout(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'saveFinancialEasyPayDeveloperConfig',
+      devToken: sessionStorage.getItem('devToken'),
+      paymentMode: mode,
+      apiKey: apiKey,
+      secretKey: secretKey,
+      webhookProxyToken: webhookProxyToken
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      Notiflix.Notify.success(data.message || 'EasyPay settings zimehifadhiwa.');
+      ['devEasyPayApiKey','devEasyPaySecretKey','devEasyPayProxyToken'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      loadDeveloperEasyPayConfig();
+    } else {
+      if (devHandleAuthFailure(data)) return;
+      Notiflix.Notify.failure(data.message || 'Imeshindwa kuhifadhi EasyPay settings.');
+    }
+  })
+  .catch(err => {
+    console.error('Save EasyPay Developer config:', err);
+    Notiflix.Notify.failure('Hitilafu ya mtandao. Hakikisha kama mipangilio imehifadhiwa kabla ya kujaribu tena.');
+  })
+  .finally(() => {
+    const b = document.getElementById('devEasyPaySaveBtn');
+    if (b) { b.disabled = false; b.innerHTML = '<i class="fas fa-save"></i> Hifadhi EasyPay Settings'; }
+  });
 }
 
 function submitDevPasswordChange() {
@@ -14300,6 +14424,42 @@ function formatTimeRemaining(msRemaining) {
 // endapo Msimamizi hayupo kwenye "Settings" tab - itamjulisha popote alipo.
 let planPollingInterval = null;
 let lastKnownPlanState = null; // {active, expiryDate, planType} - kwa kulinganisha
+
+function financialEasyPayStart(packageCode) {
+  const packageNames = { MONTH_1: 'Mwezi 1 — TSh 10,000', MONTH_3: 'Miezi 3 — TSh 25,000', MONTH_6: 'Miezi 6 — TSh 45,000', YEAR_1: 'Mwaka 1 — TSh 80,000' };
+  if (!currentDbId || !currentUserEmail) { Notiflix.Notify.failure('Ingia kwenye akaunti yako kwanza.'); return; }
+  Swal.fire({
+    title: 'Thibitisha Malipo',
+    html: '<div style="text-align:left;font-size:14px;margin-bottom:10px;"><b>Kifurushi:</b> ' + packageNames[packageCode] + '</div>' +
+      '<input id="finPayPhone" class="swal2-input" placeholder="Namba ya simu 07XXXXXXXX" inputmode="tel">' +
+      '<input id="finPayPassword" type="password" class="swal2-input" placeholder="Nenosiri la akaunti">' +
+      '<p style="font-size:12px;color:#64748b;text-align:left;margin:8px 0 0;">Nenosiri linatumika kuthibitisha mmiliki wa akaunti kabla ya kuanzisha malipo.</p>',
+    confirmButtonText: 'Endelea Kulipa', cancelButtonText: 'Ghairi', showCancelButton: true, focusConfirm: false,
+    preConfirm: () => {
+      const phone = document.getElementById('finPayPhone').value.trim();
+      const password = document.getElementById('finPayPassword').value;
+      if (!phone || !password) { Swal.showValidationMessage('Jaza namba ya simu na nenosiri.'); return false; }
+      return { phone, password };
+    }
+  }).then(result => {
+    if (!result.isConfirmed) return;
+    const requestId = 'FIN-' + (window.crypto && crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2)));
+    Notiflix.Loading.standard('Inaandaa ombi la malipo...');
+    fetchWithTimeout(SCRIPT_URL, { method: 'POST', body: JSON.stringify({
+      action: 'financialEasyPayInitiate', dbId: currentDbId, email: currentUserEmail,
+      packageCode: packageCode, phone: result.value.phone, password: result.value.password, requestId: requestId
+    }) }, 40000).then(r => r.json()).then(data => {
+      Notiflix.Loading.remove();
+      if (data.status === 'success') {
+        Swal.fire({ icon: 'info', title: 'Ombi la Malipo Limetumwa',
+          html: '<p>Thibitisha malipo kwenye simu yako.</p><p><b>Kiasi:</b> TSh ' + Number(data.amount || 0).toLocaleString('en-US') + '</p><p><b>Reference:</b> ' + String(data.reference || data.merchantReference || '') + '</p><p style="font-size:13px;color:#64748b;">Muda wa matumizi utaongezwa baada ya uthibitisho rasmi wa malipo.</p>',
+          confirmButtonText: 'Sawa' });
+      } else {
+        Swal.fire({ icon: 'error', title: 'Malipo Hayajaanzishwa', text: data.message || 'Imeshindikana kuanzisha malipo.' });
+      }
+    }).catch(err => { Notiflix.Loading.remove(); Swal.fire({ icon: 'error', title: 'Hitilafu ya Mtandao', text: err.message || 'Jaribu tena baada ya kuthibitisha hali ya ombi.' }); });
+  });
+}
 
 function startPlanStatusPolling() {
   if (planPollingInterval) return; // tayari inaendesha - usianze mara mbili
